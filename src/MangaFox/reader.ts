@@ -3,35 +3,27 @@
 
 import type { CheerioAPI } from "cheerio";
 
+import { fetchText } from "../utils/network";
+import { secureUrl } from "./parsers";
+import { concatenatedLiterals, unpack } from "./unpack";
+
 /**
  * Page-image extraction.
  *
- * Page URLs are not in the markup. They come from a Dean Edwards-packed script
- * (`function(p,a,c,k,e,d)`), and for paginated chapters from a per-page
- * `chapterfun.ashx` call guarded by a one-shot key found in that same script.
- *
- * Unpacking evaluates the packer's own return value: stripping the leading
- * `eval` turns the payload into an expression yielding the unpacked source as a
- * string rather than running it. The alternative is reimplementing the packer,
- * so `eval` stays, scoped to strings fetched from this one host.
+ * Page URLs are not in the markup. They come from a packed script (see
+ * `unpack.ts`), and for paginated chapters from a per-page `chapterfun.ashx`
+ * call guarded by a one-shot key found in that same script.
  *
  * Three chapter shapes are handled in order: webtoon (URLs inline), paginated
  * (one request per page), and a markup fallback for plainly served chapters.
  */
 
-/**
- * Reaching `eval` through a binding makes every call an indirect eval, which
- * runs in global scope and so cannot see this module's locals.
- */
-// oxlint-disable-next-line no-eval -- see above; unpacking requires it
-const globalEval: (source: string) => unknown = eval;
+/** Transient failures are common; this endpoint is rate-sensitive. */
+const PAGE_ATTEMPTS = 3;
 
-function unpack(script: string): string {
-  return (globalEval(script.replace("eval", "")) as unknown as { toString(): string }).toString();
-}
-
-function packedScript($: CheerioAPI): string | undefined {
-  return $("script:contains(function(p,a,c,k,e,d))").html() ?? undefined;
+function unpackedSource($: CheerioAPI): string | undefined {
+  const script = $("script:contains(function(p,a,c,k,e,d))").html();
+  return script ? unpack(script) : undefined;
 }
 
 export async function extractChapterPages($: CheerioAPI, chapterUrl: string): Promise<string[]> {
@@ -43,140 +35,117 @@ export async function extractChapterPages($: CheerioAPI, chapterUrl: string): Pr
 }
 
 /** Webtoon chapters inline every URL in a `newImgs=[...]` array. */
-function extractWebtoonPages($: CheerioAPI): string[] {
-  const script = packedScript($);
-  if (!script) return [];
+export function extractWebtoonPages($: CheerioAPI): string[] {
+  const list = /newImgs\s*=\s*\[([^\]]*)\]/.exec(unpackedSource($) ?? "")?.[1];
+  if (!list) return [];
 
-  const urls = /newImgs=\['(.+?)'\]/.exec(unpack(script))?.[1];
-  if (!urls) return [];
+  return [...list.matchAll(/'([^']+)'/g)].map((match) => secureUrl(match[1] ?? ""));
+}
 
-  return urls.split("','").map((url) => `https:${url.replace("'", "")}`);
+/** The chapter's page count: the script's own `imagecount`, else the pager's last numbered link. */
+function pageCount($: CheerioAPI, html: string): number {
+  const declared = Number(/\bimagecount\s*=\s*(\d+)/.exec(html)?.[1]);
+  if (declared > 0) return declared;
+
+  // The last pager entry is "next", so the count is the one before it.
+  const links = $("a", $(".pager-list-left > span").first());
+  return Number($(links[links.length - 2]).attr("data-page")) || 0;
 }
 
 /**
  * Paginated chapters expose one image per request, behind a single-use key: page
  * 1 consumes it, and later pages ride the session it establishes.
+ *
+ * Returns `[]` when the chapter is not paginated-shaped, so the caller can try
+ * the markup fallback. Once it is, every page must resolve: a chapter silently
+ * missing a page is worse than one that fails and can be retried.
  */
 async function extractPaginatedPages($: CheerioAPI, chapterUrl: string): Promise<string[]> {
-  const script = packedScript($);
-  if (!script) return [];
+  const source = unpackedSource($);
+  if (!source) return [];
 
-  const unpacked = unpack(script);
-
-  // The key is the first quoted literal, before the first statement break.
-  let secretKey = "";
-  try {
-    const keyExpression = unpacked.substring(unpacked.indexOf("'"), unpacked.indexOf(";")).trim();
-    secretKey = (globalEval(keyExpression) as unknown as { toString(): string }).toString();
-  } catch {
-    return [];
-  }
-
+  // `var guidkey=''+'d'+'b'+...;` — the key is the literals before the first statement break.
+  const key = concatenatedLiterals(source.slice(source.indexOf("="), source.indexOf(";")));
   const html = $.html();
-  const chapterIdAt = html.indexOf("chapterid");
-  if (chapterIdAt < 0) return [];
+  const chapterId = /\bchapterid\s*=\s*(\d+)/.exec(html)?.[1];
+  const count = pageCount($, html);
+  if (!key || !chapterId || count <= 0) return [];
 
-  // Skip past `chapterid=` to the numeric value terminated by `;`.
-  const chapterId = html.substring(chapterIdAt + 11, html.indexOf(";", chapterIdAt)).trim();
-
-  // The page count is the second-to-last pager entry; the last is "next".
-  const pagerLinks = $("a", $(".pager-list-left > span").first());
-  const pageCount = Number($(pagerLinks[pagerLinks.length - 2])?.attr("data-page")) || 0;
-  if (pageCount <= 0) return [];
-
-  const base = chapterUrl.substring(0, chapterUrl.lastIndexOf("/"));
-  const pageUrl = (page: number, key: string) =>
-    `${base}/chapterfun.ashx?cid=${chapterId}&page=${page}&key=${key}`;
+  const base = chapterUrl.slice(0, chapterUrl.lastIndexOf("/"));
+  const pageUrl = (page: number, pageKey: string) =>
+    `${base}/chapterfun.ashx?cid=${chapterId}&page=${page}&key=${pageKey}`;
 
   // Page 1 goes alone because it consumes the key; the rest depend only on the
   // session it opens, so they can be issued together.
-  const first = await requestPagePayload(pageUrl(1, secretKey), chapterUrl);
+  const first = await resolvePage(pageUrl(1, key), chapterUrl, 1);
   const rest = await Promise.all(
-    Array.from({ length: pageCount - 1 }, (_, index) =>
-      requestPagePayload(pageUrl(index + 2, ""), chapterUrl),
+    Array.from({ length: count - 1 }, (_, index) =>
+      resolvePage(pageUrl(index + 2, ""), chapterUrl, index + 2),
     ),
   );
 
-  const pages: string[] = [];
-  for (const body of [first, ...rest]) {
-    if (!body) continue;
-
-    // A page that fails to unpack is skipped rather than discarding the rest.
-    const url = extractPageUrl(body);
-    if (url) pages.push(url);
-  }
-
-  return pages;
+  return [first, ...rest];
 }
 
-/** The unpacked source assigns `pix=` (host path) and `pvalue=` (file name). */
-function extractPageUrl(body: string): string | undefined {
-  try {
-    const unpacked = unpack(body);
+/**
+ * The unpacked page payload assigns `pix` (host path) and `pvalue` (file names,
+ * the requested page first).
+ */
+export function parsePagePayload(body: string): string | undefined {
+  const source = unpack(body);
+  if (!source) return undefined;
 
-    const hostAt = unpacked.indexOf("pix=") + 5;
-    const host = unpacked.substring(hostAt, unpacked.indexOf(";", hostAt) - 1);
-
-    const fileAt = unpacked.indexOf("pvalue=") + 9;
-    const file = unpacked.substring(fileAt, unpacked.indexOf('"', fileAt));
-
-    return `https:${host}${file}`;
-  } catch {
-    return undefined;
-  }
+  const host = /\bpix\s*=\s*"([^"]+)"/.exec(source)?.[1];
+  const file = /\bpvalue\s*=\s*\[\s*"([^"]+)"/.exec(source)?.[1];
+  return host && file ? secureUrl(host + file) : undefined;
 }
 
-/** Transient failures are common; this endpoint is rate-sensitive. */
-async function requestPagePayload(url: string, referer: string): Promise<string | undefined> {
-  for (let attempt = 0; attempt < 3; attempt++) {
+async function resolvePage(url: string, referer: string, page: number): Promise<string> {
+  for (let attempt = 0; attempt < PAGE_ATTEMPTS; attempt++) {
     try {
-      const [, buffer] = await Application.scheduleRequest({
+      const body = await fetchText({
         url,
         method: "GET",
         headers: {
           Referer: referer,
           Accept: "*/*",
           "Accept-Language": "en-US,en;q=0.9",
-          Connection: "keep-alive",
           "X-Requested-With": "XMLHttpRequest",
         },
       });
 
-      const body = Application.arrayBufferToUTF8String(buffer);
-      if (body) return body;
+      const pageImage = parsePagePayload(body);
+      if (pageImage) return pageImage;
     } catch {
-      continue;
+      // Retried below; the final failure is reported with the page number.
     }
   }
 
-  return undefined;
+  throw new Error(`MangaFox: page ${page} of this chapter could not be loaded. Try again.`);
 }
 
 /** Some chapters are served as plain markup or an inline JSON blob. */
-function extractFallbackPages($: CheerioAPI): string[] {
+export function extractFallbackPages($: CheerioAPI): string[] {
+  const images = $("img.img-fluid")
+    .toArray()
+    .map((element) => $(element).attr("src"))
+    .filter((src): src is string => Boolean(src));
+  if (images.length > 0) return images.map(secureUrl);
+
   const pages: string[] = [];
-
-  $("img.img-fluid").each((_, element) => {
-    const src = $(element).attr("src");
-    if (src) pages.push(src);
-  });
-
-  if (pages.length > 0) return pages;
-
   $("script:not([src])").each((_, element) => {
-    const text = $(element).html() ?? "";
-    if (!text.includes('"images"') && !text.includes('"pages"')) return;
-
-    const json = /(\{.*"images":\s*\[.*\].*\})/.exec(text)?.[1];
+    const json = /(\{.*"images":\s*\[.*\].*\})/.exec($(element).html() ?? "")?.[1];
     if (!json) return;
 
     try {
       const parsed = JSON.parse(json) as { images?: (string | string[])[] };
       for (const image of parsed.images ?? []) {
         const url = Array.isArray(image) ? image[0] : image;
-        if (url) pages.push(url);
+        if (url) pages.push(secureUrl(url));
       }
-    } catch {}
+    } catch {
+      // Not the blob this looks for; other scripts may still carry it.
+    }
   });
 
   return pages;

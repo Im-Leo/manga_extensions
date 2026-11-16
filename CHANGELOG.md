@@ -4,6 +4,8 @@
 
 ### Security
 
+- MangaFox 1.2.0: page URLs are decoded from the site's packed scripts as data instead of by
+  evaluating the scripts, so the extension no longer executes code served by the site.
 - AsuraScans 1.2.0: session tokens moved from plain state to Paperback's secure storage; an existing
   session is migrated on launch and the old keys, including any stored password, are cleared. The
   sign-in request is now built with a JSON encoder, so a password containing `"` or `\` no longer
@@ -18,7 +20,7 @@
 - FlameComics 1.1.1: fewer duplicate requests. The three discover sections share one homepage
   payload, opening a title fetches its series data once for details and chapters, and concurrent
   callers share one build-id lookup and one catalog load.
-- MangaFox 1.1.2: opening a title fetches its page once instead of once for details and again for
+- MangaFox 1.2.0: opening a title fetches its page once instead of once for details and again for
   chapters.
 - MangaKakalot 1.1.1: the search form reuses the genre list for six hours instead of downloading
   the homepage each time it opens.
@@ -37,6 +39,9 @@
   unencoded.
 - AsuraScans 1.2.0: cached search tags never expired, so genres and creators added on the site
   never appeared. They now refresh daily, keeping the old list if a refresh fails.
+- MangaFox 1.2.0: a paginated chapter whose page failed to load opened with that page silently
+  missing. Each page is retried, and a page that still fails now fails the chapter so the reader
+  offers a retry. Pages from plainly served chapters are upgraded to https like covers.
 
 - AsuraScans 1.1.1: opening a title or refreshing the library failed for some series. The series
   endpoint answers `{ series }` from its cache and `{ data: { series } }` on a cache miss; both
@@ -47,5 +52,5 @@
 - MangaKakalot 1.1.1: a chapter list that failed to load (an error payload, or a Cloudflare page
   instead of JSON) showed the title as having no chapters. It now reports the failure, so the app
   offers a retry.
-- MangaFox 1.1.2: a page answering with an HTTP error status was parsed as if it were content,
+- MangaFox 1.2.0: a page answering with an HTTP error status was parsed as if it were content,
   which surfaced as blank fields. It now fails with the status and the endpoint.

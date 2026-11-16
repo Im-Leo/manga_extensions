@@ -183,6 +183,12 @@ that to pay off: `reader.ts` issues page 1 alone (its key is single-use) and the
 together, since a serial loop cannot spend a larger budget, and a concurrent loop under a 4/sec
 budget cannot either.
 
+The page URLs arrive inside Dean Edwards-packed scripts. `MangaFox/unpack.ts` decodes them as data,
+substituting the dictionary words back the way the packer's own function would, so nothing the
+site sends is evaluated. Its tests run against scripts recorded from the live site. A page that
+still fails after three attempts fails the chapter, so the reader offers a retry instead of
+opening with a page missing.
+
 ## Content ratings
 
 Paperback blurs artwork by rating, so a wrong rating is a privacy problem rather than a cosmetic

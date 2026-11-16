@@ -168,10 +168,10 @@ export function parseChapters($: CheerioAPI, sourceManga: SourceManga): Chapter[
 }
 
 /**
- * The CDN serves covers over https, but the markup links them as http or
+ * The CDN serves covers and pages over https, but the site links them as http or
  * protocol-relative, and iOS App Transport Security blocks plain http loads.
  */
-function secureUrl(src: string): string {
+export function secureUrl(src: string): string {
   return src.replace(/^(?:https?:)?\/\//, "https://");
 }
 
