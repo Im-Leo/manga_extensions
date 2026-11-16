@@ -7,6 +7,14 @@ export const AS_DOMAIN = "https://asurascans.com";
 
 export const AS_API_DOMAIN = "https://api.asurascans.com";
 
+/**
+ * Sent as `X-Page-Token` to the reader endpoint, which rejects a request
+ * without it. The site embeds it in its reader bundle and has rotated it before
+ * (the year suffix is a hint); chapters failing to open while everything else
+ * works is the symptom of a new one.
+ */
+export const READER_PAGE_TOKEN = "asura-reader-2026";
+
 export interface AsuraMetadata extends JSONObject {
   total?: number;
   per_page?: number;

@@ -125,8 +125,8 @@ export class AsuraScansAdvancedSearchForm extends AdvancedSearchForm {
 
 /** Tag sections are fetched once and cached; a missing id means that cache is stale. */
 function getTagFromTagStore(tagId: TagSectionId, tags: TagSection[]): TagSection {
-  const section = tags.find((tag) => (tag.id as TagSectionId) === tagId);
-  if (!section) throw new Error(`Tag section not found: ${tagId}`);
+  const section = tags.find((tag) => tag.id === tagId);
+  if (!section) throw new Error(`AsuraScans: tag section not found: ${tagId}`);
 
   return section;
 }

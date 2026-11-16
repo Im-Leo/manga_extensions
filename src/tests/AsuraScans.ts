@@ -89,7 +89,7 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("unwrapSeries: rejects a payload without a series", async () => {
-    expect(() => unwrapSeries({} as never)).to.throw("Unexpected series payload");
+    expect(() => unwrapSeries({} as never)).to.throw("unexpected series payload");
   });
 
   suite.test("parseMangaDetails: maps the payload", async () => {
