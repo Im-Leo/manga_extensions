@@ -54,6 +54,9 @@ Content**, enable the ratings you want visible and turn off blurring for them.
 **MangaKakalot asks for a Cloudflare check.** Complete it in the window Paperback opens. The result
 is remembered across restarts.
 
+**A MangaFox title fails with "no longer on fanfox.net".** The site removed the series, usually
+because it was licensed. It will not return on MangaFox; migrate it to another source.
+
 **A chapter fails to open.** Retry it. A chapter only opens once every page has loaded, so a
 temporary failure shows as an error rather than a chapter with pages missing.
 

@@ -23,6 +23,7 @@ import {
 import sourceInfo from "../MangaFox/pbconfig.js";
 import { chapterUrl, directoryUrl, mangaUrl, releasesUrl } from "../MangaFox/urls.js";
 import { UNRATED_LISTING_DEFAULT } from "../utils/content-rating.js";
+import { rejectionOf } from "./async.js";
 import {
   assertDiscoverSectionItem,
   assertSourceManga,
@@ -240,6 +241,36 @@ function registerRequestTests(suite: TestSuite): void {
       );
     },
   );
+
+  suite.test(
+    "requests: a title removed from the site says so, for details and updates",
+    async () => {
+      const extension = new MangaFoxExtension();
+      const sourceManga = { mangaId: "removed_title", mangaInfo: { primaryTitle: "Removed" } };
+
+      await withFakeNetwork(
+        [["/manga/removed_title", { status: 404, body: "<title>404</title>" }]],
+        async () => {
+          const details = await rejectionOf(extension.getMangaDetails("removed_title"));
+          const chapters = await rejectionOf(extension.getChapters(sourceManga as SourceManga));
+
+          for (const error of [details, chapters]) {
+            expect(error.message).to.contain("no longer on fanfox.net");
+            expect(error.message).to.contain("Migrate it");
+          }
+        },
+      );
+    },
+  );
+
+  suite.test("requests: other failures keep their status", async () => {
+    const extension = new MangaFoxExtension();
+
+    await withFakeNetwork([["/manga/busy_title", { status: 503 }]], async () => {
+      const error = await rejectionOf(extension.getMangaDetails("busy_title"));
+      expect(error.message).to.contain("503");
+    });
+  });
 }
 
 export async function runTests(logger: TestLogger) {
