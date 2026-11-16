@@ -16,6 +16,7 @@ import {
   rateContent,
 } from "../utils/content-rating.js";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor.js";
+import { rejectionOf } from "./async.js";
 import type { TestSuite } from "./suite.js";
 
 function fakeCookieStorage() {
@@ -270,16 +271,14 @@ export function registerSharedUtilTests(suite: TestSuite): void {
       bypassPage: "https://example.com/manga",
     });
 
-    let raised: unknown;
-    try {
-      await interceptor.interceptResponse(
+    const raised = await rejectionOf(
+      interceptor.interceptResponse(
         { url: "https://example.com/x", method: "GET" },
-        response(403, { "cf-mitigated": "challenge" }),
+        // Mixed case: header names are case-insensitive and servers vary.
+        response(403, { "CF-Mitigated": "challenge" }),
         EMPTY_BODY,
-      );
-    } catch (error) {
-      raised = error;
-    }
+      ),
+    );
 
     expect(raised, "a challenge must not be returned as data").to.be.instanceOf(CloudflareError);
   });
@@ -292,13 +291,7 @@ export function registerSharedUtilTests(suite: TestSuite): void {
     const passed = await lenient.interceptResponse(request, response(404), EMPTY_BODY);
     expect(passed, "lenient passes the body through").to.equal(EMPTY_BODY);
 
-    let raised: unknown;
-    try {
-      await strict.interceptResponse(request, response(404), EMPTY_BODY);
-    } catch (error) {
-      raised = error;
-    }
-    expect(raised, "requireOk rejects a 404").to.be.instanceOf(Error);
+    await rejectionOf(strict.interceptResponse(request, response(404), EMPTY_BODY));
 
     const ok = await strict.interceptResponse(request, response(200), EMPTY_BODY);
     expect(ok, "a 200 passes even under requireOk").to.equal(EMPTY_BODY);
@@ -319,12 +312,6 @@ export function registerSharedUtilTests(suite: TestSuite): void {
     // error page that parses, which would otherwise surface as empty content.
     expect(await strict.interceptResponse(page, response(304), EMPTY_BODY)).to.equal(EMPTY_BODY);
 
-    let raised: unknown;
-    try {
-      await strict.interceptResponse(page, response(404), EMPTY_BODY);
-    } catch (error) {
-      raised = error;
-    }
-    expect(raised, "a failing page still rejects").to.be.instanceOf(Error);
+    await rejectionOf(strict.interceptResponse(page, response(404), EMPTY_BODY));
   });
 }
