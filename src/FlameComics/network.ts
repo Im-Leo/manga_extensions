@@ -3,7 +3,7 @@
 
 import { URL } from "@paperback/types";
 
-import { fetchText } from "../utils/network";
+import { fetchJSON, fetchResponse, fetchText } from "../utils/network";
 import { CDN, DOMAIN } from "./models";
 
 /**
@@ -95,7 +95,7 @@ export async function fetchNextData<T>(
     const url = dataUrl(id, segments);
     if (query) for (const [k, v] of Object.entries(query)) url.setQueryItem(k, v);
 
-    const body = await fetchText(url.toString());
+    const { body } = await fetchResponse(url.toString());
 
     let payload: T & NextDataEnvelope;
     try {
@@ -124,7 +124,7 @@ export async function fetchNextData<T>(
 /** `/api/series` is a plain REST route: no envelope, and immune to id rotation. */
 export async function fetchSimpleSeries<T>(): Promise<T> {
   const url = new URL(DOMAIN).addPathComponent("api").addPathComponent("series");
-  return JSON.parse(await fetchText(url.toString())) as T;
+  return fetchJSON<T>(url.toString());
 }
 
 /** `last_edit` serves as the cache-buster; covers are replaced in place. */
