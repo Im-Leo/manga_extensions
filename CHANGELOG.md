@@ -32,6 +32,8 @@
 - CI: a release branch deploys only after conformance and the offline suite pass on that commit.
   Workflow actions are pinned to commit SHAs, kept current by Dependabot, and jobs that do not
   publish run with read-only access.
+- MangaDex 1.1.1: request errors name the source. Restoring default settings is driven by one list
+  of every setting, so none can be left out.
 
 ### Fixed
 

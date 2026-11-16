@@ -8,7 +8,7 @@ import { DEVELOPERS } from "../utils/developers";
 export default {
   name: "MangaDex",
   description: "Extension that pulls content from mangadex.org.",
-  version: "1.1.0",
+  version: "1.1.1",
   icon: "icon.png",
   language: "multi",
   contentRating: ContentRating.EVERYONE,
