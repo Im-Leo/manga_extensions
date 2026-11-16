@@ -14,6 +14,7 @@ import {
   unwrapSeries,
 } from "../AsuraScans/parsers.js";
 import sourceInfo from "../AsuraScans/pbconfig.js";
+import { PersistedTagCache, TAGS_TTL_MS, clearCachedTags } from "../AsuraScans/tags.js";
 import {
   chapterListUrl,
   chapterUrl,
@@ -25,6 +26,7 @@ import {
   trendingUrl,
 } from "../AsuraScans/urls.js";
 import { registerAsuraSessionTests } from "./asurascans-session.js";
+import { rejectionOf } from "./async.js";
 import {
   assertChapter,
   assertSearchResultItem,
@@ -250,11 +252,79 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 }
 
+const GENRES_SECTION = [
+  { id: "genres", title: "Genres", tags: [{ id: "action", title: "Action" }] },
+];
+
+function registerTagCacheTests(suite: TestSuite): void {
+  suite.test("tags: concurrent readers share one load, and the result persists", async () => {
+    clearCachedTags();
+    let loads = 0;
+    const cache = new PersistedTagCache(async () => {
+      loads++;
+      return GENRES_SECTION;
+    });
+
+    await Promise.all([cache.get(), cache.get(), cache.get()]);
+    expect(loads).to.equal(1);
+
+    const relaunched = new PersistedTagCache(async () => {
+      loads++;
+      return [];
+    });
+    expect(await relaunched.get(), "served from state after a relaunch").to.deep.equal(
+      GENRES_SECTION,
+    );
+    expect(loads).to.equal(1);
+  });
+
+  suite.test("tags: expire after a day, and a failed refresh keeps the old ones", async () => {
+    clearCachedTags();
+    let time = 0;
+    let failing = false;
+    let loads = 0;
+    const cache = new PersistedTagCache(
+      async () => {
+        loads++;
+        if (failing) throw new Error("offline");
+        return GENRES_SECTION;
+      },
+      () => time,
+    );
+
+    await cache.get();
+    time = TAGS_TTL_MS;
+    await cache.get();
+    expect(loads, "reloaded once expired").to.equal(2);
+
+    failing = true;
+    time = 2 * TAGS_TTL_MS;
+    expect(await cache.get(), "stale beats empty").to.deep.equal(GENRES_SECTION);
+
+    clearCachedTags();
+    await rejectionOf(cache.get());
+  });
+
+  suite.test("tags: a cache written before timestamps is reloaded", async () => {
+    Application.setState(GENRES_SECTION, "tags");
+    let loads = 0;
+    const cache = new PersistedTagCache(async () => {
+      loads++;
+      return GENRES_SECTION;
+    });
+
+    await cache.get();
+    expect(loads).to.equal(1);
+    clearCachedTags();
+  });
+}
+
 export async function runTests(logger: TestLogger) {
   const suite = new TestSuite("AsuraScans tests", logger);
 
   registerOfflineTests(suite);
   registerAsuraSessionTests(suite);
+  registerTagCacheTests(suite);
 
   if (liveTestsEnabled()) {
     registerDefaultTests(suite, AsuraScans, sourceInfo);
