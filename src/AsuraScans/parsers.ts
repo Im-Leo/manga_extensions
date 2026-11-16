@@ -45,7 +45,7 @@ export function toSearchResultItem(manga: AsuraManga): SearchResultItem {
  */
 export function unwrapSeries(body: AsuraSeriesResponse): AsuraManga {
   const series = "series" in body ? body.series : body.data?.series;
-  if (!series) throw new Error("Unexpected series payload");
+  if (!series) throw new Error("AsuraScans: unexpected series payload");
   return series;
 }
 

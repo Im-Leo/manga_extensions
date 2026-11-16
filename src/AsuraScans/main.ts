@@ -30,6 +30,7 @@ import { AsuraScansAdvancedSearchForm } from "./forms/search";
 import { AsuraSettingForm, getShowUpcomingChapters } from "./forms/settings";
 import {
   AS_DOMAIN,
+  READER_PAGE_TOKEN,
   TagSectionId,
   statuses,
   types,
@@ -68,9 +69,6 @@ import {
 } from "./urls";
 
 const PAGE_SIZE = 20;
-
-/** Required by the reader endpoint; the API rejects a request without it. */
-const PAGE_TOKEN = "asura-reader-2026";
 
 export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
   private readonly rateLimiter = new BasicRateLimiter("ratelimiter", {
@@ -248,7 +246,7 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
       method: "GET",
       headers: {
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        "X-Page-Token": PAGE_TOKEN,
+        "X-Page-Token": READER_PAGE_TOKEN,
       },
     });
 

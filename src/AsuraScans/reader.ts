@@ -50,7 +50,8 @@ export async function descramblePage(page: PageData): Promise<string> {
       resolve(canvas.toDataURL());
     };
 
-    image.onerror = () => reject(new Error(`Failed to load page for unscrambling: ${page.url}`));
+    image.onerror = () =>
+      reject(new Error(`AsuraScans: failed to load page for unscrambling: ${page.url}`));
     image.src = source;
   });
 }

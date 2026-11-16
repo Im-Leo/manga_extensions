@@ -144,7 +144,8 @@ export async function signIn(email: string, password: string): Promise<AsuraUser
   try {
     tokens = await postTokens(authUrl("login"), { email, password });
   } catch (error) {
-    if (isRejection(error)) throw new Error("AsuraScans: invalid email or password.");
+    if (isRejection(error))
+      throw new Error("AsuraScans: invalid email or password.", { cause: error });
     throw error;
   }
 
@@ -175,7 +176,9 @@ const refreshSession = singleFlight(async (): Promise<string> => {
   } catch (error) {
     if (!isRejection(error)) throw error;
     signOut();
-    throw new Error("AsuraScans: your session expired. Sign in again under the source settings.");
+    throw new Error("AsuraScans: your session expired. Sign in again under the source settings.", {
+      cause: error,
+    });
   }
 
   writeSession({
