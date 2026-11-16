@@ -41,6 +41,7 @@ import {
   SIMPLE_SERIES,
   makeSeries,
 } from "./fixtures/flamecomics.js";
+import { registerFlameNetworkTests } from "./flamecomics-network.js";
 import { liveTestsEnabled } from "./live-tests.js";
 import { TestSuite, registerDefaultTests } from "./suite.js";
 
@@ -185,6 +186,7 @@ export async function runTests(logger: TestLogger) {
   const suite = new TestSuite("FlameComics tests", logger);
 
   registerOfflineTests(suite);
+  registerFlameNetworkTests(suite);
 
   if (liveTestsEnabled()) {
     registerDefaultTests(suite, FlameComics, sourceInfo);
