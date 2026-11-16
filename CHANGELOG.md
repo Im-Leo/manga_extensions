@@ -26,6 +26,9 @@
   the homepage each time it opens.
 - AsuraScans 1.2.0: the genre and creator lists load in parallel, and the discover sections that
   need them share one load.
+- CI: a release branch deploys only after conformance and the offline suite pass on that commit.
+  Workflow actions are pinned to commit SHAs, kept current by Dependabot, and jobs that do not
+  publish run with read-only access.
 
 ### Fixed
 
@@ -39,6 +42,10 @@
   unencoded.
 - AsuraScans 1.2.0: cached search tags never expired, so genres and creators added on the site
   never appeared. They now refresh daily, keeping the old list if a refresh fails.
+- CI: deleting any branch ran the cleanup that removes a release from `gh-pages`, because the guard
+  read the default branch instead of the deleted one and its `exit 0` ended only its own step. A
+  branch named like a release folder would have deleted that release. The cleanup now runs only for
+  deleted release branches, and the branch name no longer reaches the shell unquoted.
 - MangaFox 1.2.0: a paginated chapter whose page failed to load opened with that page silently
   missing. Each page is retried, and a page that still fails now fails the chapter so the reader
   offers a retry. Pages from plainly served chapters are upgraded to https like covers.
