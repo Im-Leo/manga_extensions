@@ -49,13 +49,13 @@ more than one question:
 
 ## Shared utilities
 
-| Module              | Purpose                                                                    |
-| ------------------- | -------------------------------------------------------------------------- |
-| `network.ts`        | request helpers; non-2xx and malformed bodies throw, naming the endpoint   |
-| `interceptor.ts`    | `Referer`, user agent and Cloudflare challenge detection for every request |
-| `cache.ts`          | `singleFlight` and `TtlCache`, which coalesce requests made together       |
-| `content-rating.ts` | the rating classifier and the cache of ratings learned from detail pages   |
-| `url-builder/`      | query-string building for the AsuraScans API                               |
+| Module              | Purpose                                                                         |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `network.ts`        | request helpers; non-2xx and malformed bodies throw, naming the endpoint        |
+| `interceptor.ts`    | `Referer`, user agent and Cloudflare challenges, resolved on the challenged URL |
+| `cache.ts`          | `singleFlight` and `TtlCache`, which coalesce requests made together            |
+| `content-rating.ts` | the rating classifier and the cache of ratings learned from detail pages        |
+| `url-builder/`      | query-string building for the AsuraScans API                                    |
 
 Readers fail loudly: an error page or a non-JSON body becomes an error the app can offer to retry,
 never an empty shelf or an empty chapter list.
@@ -78,9 +78,9 @@ and page images bypass the budget; only API and page requests are paced.
 | MangaKakalot | 8            | measured against the site           |
 
 **MangaKakalot** is the one Cloudflare-protected source, and a re-triggered challenge fails it
-closed rather than slowing it, so its limit stays below what the site absorbed. Cloudflare guards
-its detail pages but not its listing pages, and the measurement comes from listings only; if the
-source starts failing closed on device, this limit is the first thing to lower.
+closed rather than slowing it, so its limit stays below what the site absorbed. Cloudflare
+challenges its search but not its listings, details or chapters, and the measurement comes from
+listings; if the source starts failing closed on device, this limit is the first thing to lower.
 
 **MangaFox's** limit governs how fast a chapter opens. A paginated chapter needs one
 `chapterfun.ashx` request per page, behind a single-use key, so `reader.ts` requests page 1 alone
