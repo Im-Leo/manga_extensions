@@ -20,6 +20,7 @@ import {
   type SourceManga,
 } from "@paperback/types";
 
+import { TtlCache } from "../utils/cache";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor";
 import { FlameAdvancedSearchForm } from "./forms/search";
 import { DOMAIN } from "./models";
@@ -35,7 +36,7 @@ import type {
   SimpleSeriesListItem,
   SortableListItem,
 } from "./models";
-import { fetchNextData, fetchSimpleSeries } from "./network";
+import { NextDataClient, fetchSimpleSeries } from "./network";
 import {
   applyAdvancedFilters,
   buildFilterOptions,
@@ -54,35 +55,66 @@ const SECTION_POPULAR = "popular";
 const SECTION_LATEST = "latest";
 const SECTION_STAFF = "staff";
 
-const CANDIDATES_CACHE_TTL = 5 * 60 * 1000;
 const PAGE_SIZE = 100;
 
+/** Long enough to cover one screen's worth of calls, short enough that a refresh sees new chapters. */
+const PAGE_CACHE_TTL_MS = 60 * 1000;
+const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const HOMEPAGE_KEY = "homepage";
+const CATALOG_KEY = "catalog";
+
+/** The whole catalog, aggregated once and reused for search, filters and sort. */
+interface Catalog {
+  candidates: SortableListItem[];
+  filters: FlameFilter;
+}
+
+type Comparator = (a: SortableListItem, b: SortableListItem) => number;
+
+const COMPARATORS: Record<string, Comparator> = {
+  latest: (a, b) => (b.updated ?? b.last_edit) - (a.updated ?? a.last_edit),
+  title_asc: (a, b) => a.title.localeCompare(b.title),
+  title_desc: (a, b) => b.title.localeCompare(a.title),
+  likes: (a, b) => (b.likes ?? 0) - (a.likes ?? 0),
+  year: (a, b) => (b.year ?? 0) - (a.year ?? 0),
+};
+
+/** Fisher-Yates, in place. */
+function shuffle<T>(items: T[]): void {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j] as T, items[i] as T];
+  }
+}
+
 export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsConfig> {
-  globalRateLimiter = new BasicRateLimiter("rateLimiter", {
+  private readonly rateLimiter = new BasicRateLimiter("rateLimiter", {
     numberOfRequests: 10,
     bufferInterval: 1,
     ignoreImages: true,
   });
 
-  cookieStorageInterceptor = new CookieStorageInterceptor({ storage: "stateManager" });
-  flameInterceptor = new SiteInterceptor("main", { domain: DOMAIN });
+  private readonly cookieStorage = new CookieStorageInterceptor({ storage: "stateManager" });
+  private readonly interceptor = new SiteInterceptor("main", { domain: DOMAIN });
 
-  /** The whole catalog, aggregated once and reused for search, filters and sort. */
-  private candidateCache: {
-    data: { candidates: SortableListItem[]; params: FlameFilter };
-    timestamp: number;
-  } | null = null;
+  private readonly nextData = new NextDataClient();
 
-  private isCacheValid(): boolean {
-    return (
-      !!this.candidateCache && Date.now() - this.candidateCache.timestamp < CANDIDATES_CACHE_TTL
-    );
-  }
+  /** Every discover section reads the same homepage payload. */
+  private readonly homepage = new TtlCache<string, HomepageResponse>(PAGE_CACHE_TTL_MS, 1);
+
+  /**
+   * Opening a title asks for details and chapters, which one route answers. Few
+   * entries: a library refresh walks every title and none of those repeat.
+   */
+  private readonly series = new TtlCache<string, SeriesDetailResponse>(PAGE_CACHE_TTL_MS, 4);
+
+  private readonly catalog = new TtlCache<string, Catalog>(CATALOG_CACHE_TTL_MS, 1);
 
   async initialise(): Promise<void> {
-    this.globalRateLimiter.registerInterceptor();
-    this.cookieStorageInterceptor.registerInterceptor();
-    this.flameInterceptor.registerInterceptor();
+    this.rateLimiter.registerInterceptor();
+    this.cookieStorage.registerInterceptor();
+    this.interceptor.registerInterceptor();
   }
 
   async cloudflareBypassCompleted(
@@ -90,29 +122,33 @@ export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsCon
     cookies: Cookie[],
     _localStorage: Record<string, string>,
   ): Promise<void> {
-    persistCloudflareCookies(cookies, this.cookieStorageInterceptor);
+    persistCloudflareCookies(cookies, this.cookieStorage);
   }
 
   /** Latest supplies recency, browse supplies metadata, `/api/series` supplies counts. */
-  private async refreshCandidateCache(): Promise<SortableListItem[]> {
-    const [latest, browse, simple] = await Promise.all([
-      fetchNextData<LatestProps>(["latest.json"]),
-      fetchNextData<SearchProps>(["browse.json"]),
-      fetchSimpleSeries<SimpleSeriesListItem[]>(),
-    ]);
+  private loadCatalog(): Promise<Catalog> {
+    return this.catalog.get(CATALOG_KEY, async () => {
+      const [latest, browse, simple] = await Promise.all([
+        this.nextData.fetch<LatestProps>(["latest.json"]),
+        this.nextData.fetch<SearchProps>(["browse.json"]),
+        fetchSimpleSeries<SimpleSeriesListItem[]>(),
+      ]);
 
-    const nonNovels = latest.pageProps.allSeries.filter((s) => !isNovel(s));
-    const enriched = enrichLatestWithBrowseData(nonNovels, browse.pageProps.series);
-    const candidates = toSortableList(enriched, simple);
-    const params = buildFilterOptions(candidates, browse.pageProps.initialFilters);
+      const nonNovels = latest.pageProps.allSeries.filter((s) => !isNovel(s));
+      const enriched = enrichLatestWithBrowseData(nonNovels, browse.pageProps.series);
+      const candidates = toSortableList(enriched, simple);
 
-    this.candidateCache = { data: { candidates, params }, timestamp: Date.now() };
-    return candidates;
+      return {
+        candidates,
+        filters: buildFilterOptions(candidates, browse.pageProps.initialFilters),
+      };
+    });
   }
 
-  private async getCandidates(): Promise<SortableListItem[]> {
-    if (this.isCacheValid()) return [...this.candidateCache!.data.candidates];
-    return this.refreshCandidateCache();
+  private loadSeries(mangaId: string): Promise<SeriesDetailResponse> {
+    return this.series.get(mangaId, (id) =>
+      this.nextData.fetch<SeriesDetailResponse>(["series", `${id}.json`], { id }),
+    );
   }
 
   async getDiscoverSections(): Promise<DiscoverSection[]> {
@@ -127,7 +163,9 @@ export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsCon
     section: DiscoverSection,
     _metadata: Metadata | undefined,
   ): Promise<PagedResults<DiscoverSectionItem>> {
-    const homepage = await fetchNextData<HomepageResponse>(["index.json"]);
+    const homepage = await this.homepage.get(HOMEPAGE_KEY, () =>
+      this.nextData.fetch<HomepageResponse>(["index.json"]),
+    );
     return parseHomepageSection(section.id, homepage);
   }
 
@@ -138,51 +176,25 @@ export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsCon
   ): Promise<PagedResults<SearchResultItem>> {
     const page = metadata?.page ?? 1;
     const title = (searchQuery.title ?? "").trim().toLowerCase();
+    const { candidates: catalog, filters } = await this.loadCatalog();
 
-    let candidates = await this.getCandidates();
+    // Copied: sorting below is in place, and the catalog is shared across searches.
+    let candidates = [...catalog];
 
     if (title.length > 0) {
       candidates = candidates.filter((c) => c.title.toLowerCase().includes(title));
     }
 
     // Filter before paginating, so pages stay dense and the next-page flag is honest.
-    if (searchQuery.metadata && this.candidateCache) {
-      candidates = applyAdvancedFilters(
-        candidates,
-        searchQuery.metadata,
-        this.candidateCache.data.params,
-      );
+    if (searchQuery.metadata) {
+      candidates = applyAdvancedFilters(candidates, searchQuery.metadata, filters);
     }
 
-    switch (sortingOption.id) {
-      case "latest":
-        candidates.sort((a, b) => (b.updated ?? b.last_edit) - (a.updated ?? a.last_edit));
-        break;
-      case "title_asc":
-        candidates.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      case "title_desc":
-        candidates.sort((a, b) => b.title.localeCompare(a.title));
-        break;
-      case "likes":
-        candidates.sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0));
-        break;
-      case "year":
-        candidates.sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
-        break;
-      case "random":
-        // Fisher-Yates. Both indices are in range by construction, but the compiler
-        // cannot see that, so each element is bound before the swap.
-        for (let i = candidates.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          const current = candidates[i];
-          const swap = candidates[j];
-          if (current && swap) {
-            candidates[i] = swap;
-            candidates[j] = current;
-          }
-        }
-        break;
+    if (sortingOption.id === "random") {
+      shuffle(candidates);
+    } else {
+      const comparator = COMPARATORS[sortingOption.id];
+      if (comparator) candidates.sort(comparator);
     }
 
     const startIndex = (page - 1) * PAGE_SIZE;
@@ -197,8 +209,8 @@ export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsCon
   async getAdvancedSearchForm(
     searchQuery: SearchQuery<SearchMetadata>,
   ): Promise<AdvancedSearchForm> {
-    if (!this.isCacheValid()) await this.refreshCandidateCache();
-    return new FlameAdvancedSearchForm(searchQuery, this.candidateCache?.data.params);
+    const { filters } = await this.loadCatalog();
+    return new FlameAdvancedSearchForm(searchQuery, filters);
   }
 
   async getSortingOptions(_query: SearchQuery<SearchMetadata>): Promise<SortingOption[]> {
@@ -213,19 +225,11 @@ export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsCon
   }
 
   async getMangaDetails(mangaId: string): Promise<SourceManga> {
-    // One route returns the series and its chapter list together.
-    const response = await fetchNextData<SeriesDetailResponse>(["series", `${mangaId}.json`], {
-      id: mangaId,
-    });
-    return parseSeriesDetail(mangaId, response);
+    return parseSeriesDetail(mangaId, await this.loadSeries(mangaId));
   }
 
   async getChapters(sourceManga: SourceManga): Promise<Chapter[]> {
-    const response = await fetchNextData<SeriesDetailResponse>(
-      ["series", `${sourceManga.mangaId}.json`],
-      { id: sourceManga.mangaId },
-    );
-    return parseChapters(sourceManga, response);
+    return parseChapters(sourceManga, await this.loadSeries(sourceManga.mangaId));
   }
 
   async getChapterDetails(chapter: Chapter): Promise<ChapterDetails> {
@@ -241,13 +245,13 @@ export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsCon
 
     if (!seriesId || !token) {
       throw new Error(
-        `[FlameComics] Cannot fetch chapter — missing series_id/token in chapterId=${chapter.chapterId}`,
+        `FlameComics: cannot open chapter ${chapter.chapterId}; its series id or token is missing.`,
       );
     }
 
-    const response = await fetchNextData<ChapterReaderResponse>(
-      ["series", String(seriesId), `${token}.json`],
-      { id: String(seriesId), token },
+    const response = await this.nextData.fetch<ChapterReaderResponse>(
+      ["series", seriesId, `${token}.json`],
+      { id: seriesId, token },
     );
     return parseChapterDetails(chapter.chapterId, response);
   }

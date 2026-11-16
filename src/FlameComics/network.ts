@@ -3,6 +3,7 @@
 
 import { URL } from "@paperback/types";
 
+import { TtlCache } from "../utils/cache";
 import { fetchJSON, fetchResponse, fetchText } from "../utils/network";
 import { CDN, DOMAIN } from "./models";
 
@@ -17,10 +18,9 @@ import { CDN, DOMAIN } from "./models";
  */
 
 /** The id only changes on redeploy, so a stale cache costs at most one retry. */
-const BUILD_ID_TTL = 6 * 60 * 60;
+const BUILD_ID_TTL_MS = 6 * 60 * 60 * 1000;
 
-let buildId: string | undefined;
-let buildIdFetchedAt = 0;
+const BUILD_ID_KEY = "current";
 
 /** The one failure a retry can fix. Everything else answers the same under a new id. */
 class StaleBuildIdError extends Error {}
@@ -50,81 +50,79 @@ async function fetchBuildId(): Promise<string> {
   return buildId;
 }
 
-async function getBuildId(): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  if (!buildId || now - buildIdFetchedAt > BUILD_ID_TTL) {
-    buildId = await fetchBuildId();
-    buildIdFetchedAt = now;
-  }
-  return buildId;
-}
-
-async function withBuildIdRetry<T>(fn: (buildId: string) => Promise<T>): Promise<T> {
-  const id = await getBuildId();
-
-  try {
-    return await fn(id);
-  } catch (error) {
-    if (!(error instanceof StaleBuildIdError)) throw error;
-
-    buildId = undefined;
-    const fresh = await getBuildId();
-    // Same id means the payload was not stale after all; retrying would repeat it.
-    if (fresh === id) throw error;
-
-    return fn(fresh);
-  }
-}
-
-function dataUrl(id: string, segments: string[]): URL {
+function dataUrl(id: string, segments: string[], query?: Record<string, string>): string {
   const url = new URL(DOMAIN)
     .addPathComponent("_next")
     .addPathComponent("data")
     .addPathComponent(id);
-  segments.forEach((s) => url.addPathComponent(s));
-  return url;
+  for (const segment of segments) url.addPathComponent(segment);
+  for (const [key, value] of Object.entries(query ?? {})) url.setQueryItem(key, value);
+  return url.toString();
 }
 
-export async function fetchNextData<T>(
+async function fetchPayload<T>(
+  id: string,
   segments: string[],
   query?: Record<string, string>,
 ): Promise<T> {
   const path = segments.join("/");
+  const { body } = await fetchResponse(dataUrl(id, segments, query));
 
-  return withBuildIdRetry(async (id) => {
-    const url = dataUrl(id, segments);
-    if (query) for (const [k, v] of Object.entries(query)) url.setQueryItem(k, v);
+  let payload: T & NextDataEnvelope;
+  try {
+    payload = JSON.parse(body) as T & NextDataEnvelope;
+  } catch {
+    // Not JSON at all: the data route did not match, which a rotated id explains.
+    throw new StaleBuildIdError(`FlameComics: unparseable payload for ${path}`);
+  }
 
-    const { body } = await fetchResponse(url.toString());
+  if (payload.notFound) {
+    throw new Error(
+      `FlameComics: ${path} does not exist on the site. ` +
+        `If this title is in your library it predates a site renumbering — ` +
+        `remove it from the library and re-add it from search.`,
+    );
+  }
 
-    let payload: T & NextDataEnvelope;
+  if (!payload.pageProps || Object.keys(payload.pageProps).length === 0) {
+    throw new StaleBuildIdError(`FlameComics: empty payload for ${path}`);
+  }
+
+  return payload;
+}
+
+/**
+ * Reads `_next/data` routes under the current build id.
+ *
+ * The id is held per instance and its lookup is shared, so the discover sections
+ * loading together on launch cost one homepage request between them.
+ */
+export class NextDataClient {
+  private readonly buildIds = new TtlCache<string, string>(BUILD_ID_TTL_MS, 1);
+
+  async fetch<T>(segments: string[], query?: Record<string, string>): Promise<T> {
+    const id = await this.buildIds.get(BUILD_ID_KEY, fetchBuildId);
+
     try {
-      payload = JSON.parse(body) as T & NextDataEnvelope;
-    } catch {
-      // Not JSON at all: the data route did not match, which a rotated id explains.
-      throw new StaleBuildIdError(`FlameComics: unparseable payload for ${path}`);
-    }
+      return await fetchPayload<T>(id, segments, query);
+    } catch (error) {
+      if (!(error instanceof StaleBuildIdError)) throw error;
 
-    if (payload.notFound) {
-      throw new Error(
-        `FlameComics: ${path} does not exist on the site. ` +
-          `If this title is in your library it predates a site renumbering — ` +
-          `remove it from the library and re-add it from search.`,
-      );
-    }
+      this.buildIds.delete(BUILD_ID_KEY);
+      const fresh = await this.buildIds.get(BUILD_ID_KEY, fetchBuildId);
+      // Same id means the payload was not stale after all; retrying would repeat it.
+      if (fresh === id) throw error;
 
-    if (!payload.pageProps || Object.keys(payload.pageProps).length === 0) {
-      throw new StaleBuildIdError(`FlameComics: empty payload for ${path}`);
+      return fetchPayload<T>(fresh, segments, query);
     }
-
-    return payload;
-  });
+  }
 }
 
 /** `/api/series` is a plain REST route: no envelope, and immune to id rotation. */
 export async function fetchSimpleSeries<T>(): Promise<T> {
-  const url = new URL(DOMAIN).addPathComponent("api").addPathComponent("series");
-  return fetchJSON<T>(url.toString());
+  return fetchJSON<T>(
+    new URL(DOMAIN).addPathComponent("api").addPathComponent("series").toString(),
+  );
 }
 
 /** `last_edit` serves as the cache-buster; covers are replaced in place. */
