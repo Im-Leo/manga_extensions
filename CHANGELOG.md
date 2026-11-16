@@ -22,7 +22,7 @@
   callers share one build-id lookup and one catalog load.
 - MangaFox 1.2.0: opening a title fetches its page once instead of once for details and again for
   chapters.
-- MangaKakalot 1.1.1: the search form reuses the genre list for six hours instead of downloading
+- MangaKakalot 1.2.0: the search form reuses the genre list for six hours instead of downloading
   the homepage each time it opens.
 - AsuraScans 1.2.0: the genre and creator lists load in parallel, and the discover sections that
   need them share one load.
@@ -68,10 +68,10 @@
 - MangaFox 1.1.1: library items, Latest Updates and covers failed on iOS. The site now redirects
   slashless directory paths to plain http, which App Transport Security blocks, and serves cover
   URLs as http. Page URLs are now built in their canonical form and covers are upgraded to https.
-- MangaKakalot 1.1.1: the site moved from mangakakalot.gg to kakamanga.com, where the page the
+- MangaKakalot 1.2.0: the site moved from mangakakalot.gg to kakamanga.com, where the page the
   Cloudflare check opened no longer exists, so the check showed no captcha. The source follows the
   move, and a check now opens on the page Cloudflare challenged. Library titles keep working.
-- MangaKakalot 1.1.1: a chapter list that failed to load (an error payload, or a Cloudflare page
+- MangaKakalot 1.2.0: a chapter list that failed to load (an error payload, or a Cloudflare page
   instead of JSON) showed the title as having no chapters. It now reports the failure, so the app
   offers a retry.
 - MangaFox 1.2.0: a page answering with an HTTP error status was parsed as if it were content,
