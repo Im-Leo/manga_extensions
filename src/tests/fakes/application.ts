@@ -39,7 +39,7 @@ function matches(pattern: string | RegExp, url: string): boolean {
 
 function encode(body: unknown): ArrayBuffer {
   const text = typeof body === "string" ? body : body === undefined ? "" : JSON.stringify(body);
-  return new TextEncoder().encode(text).buffer as ArrayBuffer;
+  return new TextEncoder().encode(text).buffer;
 }
 
 /**
