@@ -8,11 +8,13 @@ import { expect } from "chai";
  * failure cannot pass as "threw nothing interesting".
  */
 export async function rejectionOf(work: Promise<unknown>): Promise<Error> {
+  let rejection: unknown;
   try {
     await work;
   } catch (error) {
-    expect(error, "rejection reason").to.be.instanceOf(Error);
-    return error as Error;
+    rejection = error;
   }
-  expect.fail("expected the promise to reject");
+
+  expect(rejection, "expected the promise to reject with an Error").to.be.instanceOf(Error);
+  return rejection as Error;
 }
