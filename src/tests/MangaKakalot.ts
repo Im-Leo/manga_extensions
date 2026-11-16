@@ -112,7 +112,7 @@ function registerOfflineTests(suite: TestSuite): void {
 
     const tiles = items.filter(isMangaTile);
     expect(tiles[0]?.imageUrl).to.equal("https://img-r1.2xstorage.com/thumb/alpha.webp");
-    expect(tiles[1]?.imageUrl).to.equal("https://www.mangakakalot.gg/uploads/beta.webp");
+    expect(tiles[1]?.imageUrl).to.equal("https://www.kakamanga.com/uploads/beta.webp");
     expect(tiles[2]?.imageUrl).to.equal("https://img-r2.2xstorage.com/thumb/gamma.webp");
   });
 
@@ -163,7 +163,7 @@ function registerOfflineTests(suite: TestSuite): void {
     expect(info.status).to.equal("Completed");
     expect(info.rating).to.be.closeTo(1.7, 0.001);
     expect(info.synopsis).to.equal("A real synopsis follows.");
-    expect(info.shareUrl).to.equal("https://www.mangakakalot.gg/manga/detailed-title");
+    expect(info.shareUrl).to.equal("https://www.kakamanga.com/manga/detailed-title");
   });
 
   suite.test("parseMangaDetails: an adult genre raises the content rating", async () => {
@@ -259,7 +259,7 @@ function registerRequestTests(suite: TestSuite): void {
   suite.test("requests: the search form reads the genre list once", async () => {
     const extension = new MangaKakalotExtension();
 
-    await withFakeNetwork([[/mangakakalot\.gg$/, { body: GENRES_HTML }]], async (network) => {
+    await withFakeNetwork([[/kakamanga\.com$/, { body: GENRES_HTML }]], async (network) => {
       await extension.getAdvancedSearchForm({ title: "" });
       await extension.getAdvancedSearchForm({ title: "" });
 
