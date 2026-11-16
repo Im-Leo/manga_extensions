@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
+import { headerValue } from "../utils/network";
 import type { PageData } from "./models";
 
 /** Supplied by the Paperback runtime, not importable; only the members used here. */
@@ -22,7 +23,7 @@ export async function descramblePage(page: PageData): Promise<string> {
   if (!page.url || !page.tiles || !page.tile_cols || !page.tile_rows) return page.url;
 
   const [response, buffer] = await Application.scheduleRequest({ url: page.url, method: "GET" });
-  const contentType = response.headers["Content-Type"] ?? "image/jpeg";
+  const contentType = headerValue(response.headers, "content-type") ?? "image/jpeg";
   // Typed as string | ArrayBuffer; the runtime returns base64 text for a buffer.
   const encoded = Application.base64Encode(buffer) as string;
   const source = `data:${contentType};base64,${encoded}`;
