@@ -281,6 +281,12 @@ assigned where the type says `metadata?:`. Paperback treats an absent cursor and
 identically, so satisfying it would mean a conditional spread at every paged return, which is noise
 in exchange for a distinction nothing acts on.
 
+`.oxlintrc.json` enables oxlint's `correctness` category as errors and `suspicious` and `perf` as
+warnings, and `npm run lint:check` denies warnings, so all three gate a push. Each rule switched off
+carries its reason in the file. Most are the deliberate `as T` at the response boundary; one,
+`no-unnecessary-type-assertion`, is off because its autofix strips the `this as Form` cast that
+`Application.Selector` needs, which breaks the build.
+
 The suite is type-checked along with the sources; `tsconfig.json` excludes nothing. This matters
 more than it sounds: JavaScript ignores extra arguments, so a test calling a since-changed helper
 keeps passing while asserting nothing. Four sources once had their content-rating behavior rewritten

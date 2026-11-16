@@ -1,6 +1,42 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
   "rules": {
-    "typescript/consistent-type-imports": "error"
+    "typescript/consistent-type-imports": "error",
+
+    // Its type checker disagrees with tsc on `Application.Selector(this as Form, ...)`: it reports
+    // the cast as redundant, yet without it the method-name key cannot be resolved against the
+    // polymorphic `this`. Its autofix therefore breaks the build.
+    "typescript/no-unnecessary-type-assertion": "off",
+
+    // Responses are parsed into declared shapes with `as T` at the network boundary, which is the
+    // deliberate pattern here; requiring a type guard per payload buys no safety the tests do not.
+    "typescript/no-unsafe-type-assertion": "off",
+
+    // Sequential awaits are the point where they occur: paging cursors depend on the previous page,
+    // retries must wait for the attempt before, and the rate limiter would serialize them anyway.
+    "eslint/no-await-in-loop": "off",
+
+    // `toSorted` and `toReversed` are ES2023 and absent from older iOS JavaScriptCore builds the app
+    // still runs on. Every in-place call sorts an array the caller just built.
+    "unicorn/no-array-sort": "off",
+    "unicorn/no-array-reverse": "off",
+
+    // Same boundary: the API vocabularies these enums mirror arrive as strings, and comparing or
+    // assigning them is the parse step. Return-type generics such as `fetchJSON<T>` declare the
+    // shape a response is parsed into, which is the point rather than a hidden cast.
+    "typescript/no-unsafe-enum-comparison": "off",
+    "typescript/no-unsafe-enum-assignment": "off",
+    "typescript/no-unnecessary-type-parameters": "off",
+
+    // The runtime's `Image` exposes only `onload` and `onerror`, not `addEventListener`.
+    "unicorn/prefer-add-event-listener": "off",
+
+    // Flags any async function shaped like an Express handler; there is no Express here.
+    "oxc/no-async-endpoint-handlers": "off"
   }
 }
