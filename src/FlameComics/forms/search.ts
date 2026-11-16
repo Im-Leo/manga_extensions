@@ -18,6 +18,10 @@ import type { OptionItem, SearchMetadata, FlameFilter } from "../models";
  * they are derived from the aggregated catalog rather than published by the
  * site, and every selection is applied locally.
  */
+function toTags(options: OptionItem[] | undefined): Tag[] {
+  return (options ?? []).map((option) => ({ id: option.id, title: option.value }));
+}
+
 export class FlameAdvancedSearchForm extends AdvancedSearchForm {
   private categories: Record<string, "included" | "excluded">;
   private categoriesMode: ["or" | "and"];
@@ -42,9 +46,6 @@ export class FlameAdvancedSearchForm extends AdvancedSearchForm {
 
   constructor(searchQuery: SearchQuery<SearchMetadata>, searchDetails: FlameFilter | undefined) {
     super();
-
-    const toTags = (options: OptionItem[] | undefined): Tag[] =>
-      (options ?? []).map((option) => ({ id: option.id, title: option.value }));
 
     this.categoriesOptions = toTags(searchDetails?.categories);
     this.typesOptions = toTags(searchDetails?.types);

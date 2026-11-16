@@ -1,12 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
-import {
-  ContentRating,
-  type SortingOption,
-  type SourceManga,
-  type TestLogger,
-} from "@paperback/types";
+import { ContentRating, type SourceManga, type TestLogger } from "@paperback/types";
 import { expect } from "chai";
 
 import { FlameComics } from "../FlameComics/main.js";
@@ -50,7 +45,13 @@ const SOURCE_MANGA = {
   mangaInfo: { primaryTitle: "Example Series" },
 } as SourceManga;
 
-const LATEST_SORT = { id: "latest", label: "Latest Update" } as SortingOption;
+const LATEST_SORT = { id: "latest", label: "Latest Update" };
+
+/** The rating a search tile shows for `series`. */
+function rate(series: Parameters<typeof toSortableList>[0][number]) {
+  const [sortable] = toSortableList([series], SIMPLE_SERIES);
+  return toSearchResultItem(sortable!, LATEST_SORT).contentRating;
+}
 
 function registerOfflineTests(suite: TestSuite): void {
   suite.test("interceptor ids are unique", async () => {
@@ -105,11 +106,6 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("content rating: derived per title, from categories or tags", async () => {
-    const rate = (series: Parameters<typeof toSortableList>[0][number]) => {
-      const [sortable] = toSortableList([series], SIMPLE_SERIES);
-      return toSearchResultItem(sortable!, LATEST_SORT).contentRating;
-    };
-
     expect(rate(makeSeries({ tags: ["Action"] })), "a safe title").to.equal(ContentRating.EVERYONE);
     expect(rate(makeSeries({ tags: ["Adult"] })), "tags are read").to.equal(ContentRating.ADULT);
     expect(rate(makeSeries({ categories: ["Ecchi"] })), "categories are read too").to.equal(

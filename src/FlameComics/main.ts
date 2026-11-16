@@ -81,10 +81,10 @@ const COMPARATORS: Record<string, Comparator> = {
 };
 
 /** Fisher-Yates, in place. */
-function shuffle<T>(items: T[]): void {
+function shuffle(items: unknown[]): void {
   for (let i = items.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j] as T, items[i] as T];
+    [items[i], items[j]] = [items[j], items[i]];
   }
 }
 
