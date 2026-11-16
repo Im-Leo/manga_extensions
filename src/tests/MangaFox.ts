@@ -41,6 +41,7 @@ import {
   PAGER_WITHOUT_HREF_HTML,
 } from "./fixtures/mangafox.js";
 import { liveTestsEnabled } from "./live-tests.js";
+import { registerMangaFoxReaderTests } from "./mangafox-reader.js";
 import { TestSuite, registerDefaultTests } from "./suite.js";
 
 const SOURCE_MANGA = {
@@ -250,6 +251,7 @@ export async function runTests(logger: TestLogger) {
 
   registerOfflineTests(suite);
   registerRequestTests(suite);
+  registerMangaFoxReaderTests(suite);
 
   if (liveTestsEnabled()) {
     registerDefaultTests(suite, MangaFox, sourceInfo);
