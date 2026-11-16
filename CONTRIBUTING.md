@@ -60,13 +60,16 @@ bundles in a `vm` context without `process`, so `src/tests/live-tests.ts` reads 
 `globalThis`. MangaKakalot's live steps fail whenever Cloudflare challenges the runner; that is
 expected.
 
-The runner discovers only `src/tests/<SourceId>.ts`. Shared modules are tested from
-`shared-utils.ts` and `shared-network.ts`, registered by one source's suite.
+The runner discovers only `src/tests/<SourceId>.ts`. Each suite calls `registerSourceTests` from
+`suite.ts`, which adds the checks every source shares: unique interceptor ids, and the live
+end-to-end pass or its recorded skip. Shared modules are tested from `shared-utils.ts` and
+`shared-network.ts`, registered by one source's suite.
 
 ### Writing tests
 
 - **Fixtures** live in `src/tests/fixtures/`. Hand-written fixtures contain only the elements a
-  parser queries, so a failure points at one selector. Encoded payloads, such as the packed scripts
+  parser queries, so a failure points at one selector. URLs are built from the source's own
+  constants (`DOMAIN` and similar), so a site move changes one line. Encoded payloads, such as the packed scripts
   in `mangafox-reader.ts`, are recorded byte-for-byte from the live site instead.
 - **Network.** Code that makes its own requests runs under `withFakeNetwork`
   (`src/tests/fakes/application.ts`). It answers `Application.scheduleRequest` from a route table,

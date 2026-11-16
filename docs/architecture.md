@@ -40,12 +40,12 @@ Sources add modules for responsibilities the others lack:
 MangaDex is several times the size of the others and is split further, so that no module answers
 more than one question:
 
-| Module                                         | Owns                                                                                                                                     |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `state/`                                       | persisted settings, one file per area, re-exported from `state/index.ts`                                                                 |
-| `search/`                                      | `filters.ts` (form selections into query options), `fetchers.ts` (the requests behind a page), `by-prefix.ts` (`usr:` and `list:` feeds) |
-| `ratings.ts`, `relationships.ts`               | the rating vocabularies, and navigation of the `relationships` array                                                                     |
-| `chapters.ts`, `chapter-feed.ts`, `updates.ts` | reading a feed, the manga inlined on each chapter, and the library-update flow                                                           |
+| Module                                         | Owns                                                                                                                                          |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state/`                                       | persisted settings, one file per area, re-exported from `state/index.ts`; every key is declared once in `state/keys.ts`, which reset iterates |
+| `search/`                                      | `filters.ts` (form selections into query options), `fetchers.ts` (the requests behind a page), `by-prefix.ts` (`usr:` and `list:` feeds)      |
+| `ratings.ts`, `relationships.ts`               | the rating vocabularies, and navigation of the `relationships` array                                                                          |
+| `chapters.ts`, `chapter-feed.ts`, `updates.ts` | reading a feed, the manga inlined on each chapter, and the library-update flow                                                                |
 
 ## Shared utilities
 
