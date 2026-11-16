@@ -29,6 +29,8 @@ const LEGACY_KEYS = [
   "username",
   "password",
   "HQthumb",
+  // The removed "Show Upcoming Chapters" setting.
+  "prerelease",
 ];
 
 /** Refresh this far ahead of expiry, so a token cannot lapse between check and use. */

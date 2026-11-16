@@ -227,70 +227,43 @@ function registerOfflineTests(suite: TestSuite): void {
     expect(url).to.not.contain("mangatoon");
   });
 
-  suite.test("parseChapters: hides premium chapters unless enabled", async () => {
-    const response = {
-      data: [
-        makeChapter({ id: 1, number: 1 }),
-        makeChapter({ id: 2, number: 2, is_premium: true }),
-      ],
-    };
-
-    const hidden = parseChapters(response, SOURCE_MANGA, false);
-    expect(hidden, "premium chapters are hidden by default").to.have.lengthOf(1);
-    expect(hidden[0]?.chapNum).to.equal(1);
-
-    const shown = parseChapters(response, SOURCE_MANGA, true);
-    expect(shown, "enabling upcoming chapters reveals them").to.have.lengthOf(2);
-    expect(shown[1]?.additionalInfo?.["early_access"]).to.equal("true");
-  });
-
-  suite.test("parseChapters: no chapter is ever dated in the future", async () => {
-    // Paperback crashes on a future-dated chapter, and an early access chapter's
-    // unlock time is always ahead.
-    const [early, free] = parseChapters(
+  suite.test("parseChapters: locked early access chapters are never listed", async () => {
+    const chapters = parseChapters(
       {
         data: [
           makeChapter({ id: 2, number: 2, is_premium: true, early_access_until: FUTURE_DATE }),
-          makeChapter({ id: 1, number: 1, early_access_until: PAST_DATE }),
+          makeChapter({ id: 1, number: 1 }),
         ],
       },
       SOURCE_MANGA,
-      true,
     );
 
-    expect(early?.publishDate?.toISOString(), "early access: its publication").to.equal(
-      "2026-01-10T00:00:00.000Z",
-    );
-    expect(free?.publishDate?.toISOString(), "unlocked: when it became free").to.equal(
-      new Date(PAST_DATE).toISOString(),
-    );
+    expect(chapters.map((chapter) => chapter.chapNum)).to.deep.equal([1]);
   });
 
-  suite.test("releaseDate: clamps a publication that is still ahead to now", async () => {
+  suite.test("parseChapters: a chapter that became free is dated when it unlocked", async () => {
+    const [chapter] = parseChapters(
+      { data: [makeChapter({ early_access_until: PAST_DATE })] },
+      SOURCE_MANGA,
+    );
+
+    expect(chapter?.publishDate?.toISOString()).to.equal(new Date(PAST_DATE).toISOString());
+  });
+
+  suite.test("releaseDate: never dated in the future", async () => {
+    // Paperback crashes on opening a title holding a future-dated chapter.
     const now = new Date("2026-01-01T00:00:00Z");
     const scheduled = makeChapter({ published_at: "2026-06-01T00:00:00Z" });
+    const unlocking = makeChapter({ early_access_until: "2026-02-01T00:00:00Z" });
 
     expect(releaseDate(scheduled, now).toISOString()).to.equal(now.toISOString());
-  });
-
-  suite.test("parseChapters: early access is shown in the chapter title", async () => {
-    const [titled, untitled] = parseChapters(
-      {
-        data: [
-          makeChapter({ id: 2, number: 2, is_premium: true, title: "Summons" }),
-          makeChapter({ id: 1, number: 1, is_premium: true }),
-        ],
-      },
-      SOURCE_MANGA,
-      true,
+    expect(releaseDate(unlocking, now).toISOString(), "unlock and publication both ahead").to.equal(
+      now.toISOString(),
     );
-
-    expect(titled?.title).to.equal("Summons (Early Access)");
-    expect(untitled?.title).to.equal("Early Access");
   });
 
   suite.test("parseChapters: produces valid chapters", async () => {
-    const chapters = parseChapters({ data: [makeChapter()] }, SOURCE_MANGA, false);
+    const chapters = parseChapters({ data: [makeChapter()] }, SOURCE_MANGA);
 
     expect(chapters).to.have.lengthOf(1);
     chapters.forEach((chapter, index) => assertChapter(chapter, `chapter ${index}`));
