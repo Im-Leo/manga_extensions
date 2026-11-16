@@ -128,8 +128,8 @@ by area, so every `from "./state"` still resolves and no consumer changed.
 
 Because `paperback-cli` inlines the whole import graph into every bundle, this code is copied into
 each extension rather than shared at runtime. One edit therefore reaches four sources at once, which
-is why `src/tests/shared-utils.ts` tests these modules directly instead of relying on the per-source
-suites to notice.
+is why `src/tests/shared-utils.ts` and `src/tests/shared-network.ts` test these modules directly
+instead of relying on the per-source suites to notice.
 
 ## Rate limiting
 
@@ -267,6 +267,13 @@ Fixtures are hand-written and contain only the elements a parser queries, so a f
 selector rather than a whole page. Prefer method-form assertions (`expect(x.length).to.equal(0)`)
 over chai's property form (`.to.be.empty`); the latter is a bare property access, so a typo passes
 silently.
+
+Code that requests on its own (auth, retries, request coalescing) runs under
+`withFakeNetwork` from `src/tests/fakes/application.ts`. The runner's `Application` polyfill keeps
+real in-memory state but sends requests to the live site; the fake replaces only `scheduleRequest`,
+answers from a route table, and records every request so a test can assert what was sent and how
+often. An unrouted request throws instead of reaching the network. `rejectionOf` in
+`src/tests/async.ts` captures an expected failure and fails the test if none comes.
 
 Tests aim at the failure modes these sources actually exhibit: content ratings derived from a
 title's own tags rather than a static catalog, search metadata using the current key, chapter ids
