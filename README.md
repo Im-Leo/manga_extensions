@@ -133,10 +133,17 @@ by area, so every `from "./state"` still resolves and no consumer changed.
 
 | Module              | Used by                                         |
 | ------------------- | ----------------------------------------------- |
+| `cache.ts`          | AsuraScans, FlameComics, MangaFox, MangaKakalot |
 | `content-rating.ts` | AsuraScans, FlameComics, MangaFox, MangaKakalot |
 | `interceptor.ts`    | AsuraScans, FlameComics, MangaFox, MangaKakalot |
-| `network.ts`        | FlameComics, MangaFox, MangaKakalot             |
+| `network.ts`        | AsuraScans, FlameComics, MangaFox, MangaKakalot |
 | `url-builder/`      | AsuraScans                                      |
+
+`cache.ts` coalesces requests the app makes together: `singleFlight` shares one in-flight call
+between concurrent callers, and `TtlCache` keeps a result for a short time with one load per key.
+Every discover section on launch, or a title opening (details and chapters back to back), would
+otherwise repeat the same request. Caches are owned by the extension instance, so a test builds a
+fresh extension and starts cold.
 
 Because `paperback-cli` inlines the whole import graph into every bundle, this code is copied into
 each extension rather than shared at runtime. One edit therefore reaches four sources at once, which

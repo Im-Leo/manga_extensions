@@ -104,7 +104,7 @@ export class SiteInterceptor extends PaperbackInterceptor {
           headers: {
             referer: `${domain}/`,
             origin: `${domain}/`,
-            "user-agent": await Application.getDefaultUserAgent(),
+            "user-agent": await userAgent(),
           },
         },
         "Cloudflare detected, bypass it to continue!",
