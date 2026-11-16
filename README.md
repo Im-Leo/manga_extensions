@@ -9,7 +9,7 @@ repository.
 | FlameComics  | flamecomics.xyz | Manga and manhwa only; novels are not listed         |
 | MangaDex     | mangadex.org    | Settings, collections and library sync               |
 | MangaFox     | fanfox.net      |                                                      |
-| MangaKakalot | mangakakalot.gg | Protected by Cloudflare; may ask you to pass a check |
+| MangaKakalot | kakamanga.com   | Protected by Cloudflare; may ask you to pass a check |
 
 The sources I read broke often (titles vanishing, blank covers, failing searches) and the
 extensions I relied on were not updated fast enough to keep up, so I wrote these from scratch on
