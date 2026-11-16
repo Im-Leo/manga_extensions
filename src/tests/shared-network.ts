@@ -180,6 +180,16 @@ export function registerSharedNetworkTests(suite: TestSuite): void {
     expect(loads).to.equal(1);
   });
 
+  suite.test("TtlCache: delete forces the next read to reload", async () => {
+    let loads = 0;
+    const cache = new TtlCache<string, number>(60_000);
+    const load = async () => ++loads;
+
+    await cache.get("k", load);
+    cache.delete("k");
+    expect(await cache.get("k", load)).to.equal(2);
+  });
+
   suite.test("TtlCache: a rejected load is evicted, not cached", async () => {
     let attempt = 0;
     const cache = new TtlCache<string, string>(60_000);

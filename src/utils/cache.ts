@@ -58,6 +58,11 @@ export class TtlCache<K, V> {
     return value;
   }
 
+  /** Drops a value known to be stale, so the next `get` reloads it. */
+  delete(key: K): void {
+    this.entries.delete(key);
+  }
+
   private evict(time: number): void {
     if (this.entries.size <= this.maxEntries) return;
 
