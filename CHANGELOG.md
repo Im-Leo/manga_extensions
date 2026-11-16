@@ -2,7 +2,30 @@
 
 ## Unreleased
 
+### Security
+
+- AsuraScans 1.2.0: session tokens moved from plain state to Paperback's secure storage; an existing
+  session is migrated on launch and the old keys, including any stored password, are cleared. The
+  sign-in request is now built with a JSON encoder, so a password containing `"` or `\` no longer
+  corrupts it.
+
+### Changed
+
+- AsuraScans 1.2.0: signing in uses an explicit **Sign In** button instead of firing a request for
+  every character typed into the password field, reports a wrong password in the form, and adds
+  **Sign Out**. The access token is refreshed only near expiry, and concurrent refreshes are
+  coalesced so rotation can no longer sign the user out.
+
 ### Fixed
+
+- AsuraScans 1.2.0: free chapters failed with "Access token expired" whenever a signed-in session
+  could not be refreshed; only early access chapters now require the account.
+- AsuraScans 1.2.0: progress set from the tracking form was never saved for a title without a
+  bookmark, and opening the form created a bookmark before **Done** was tapped. The form is now
+  read-only until **Done**, which creates the bookmark if needed, saves, and shows an error if the
+  save fails.
+- AsuraScans 1.2.0: bookmark lookups broke for titles containing `&`, `#` or `?`, which were sent
+  unencoded.
 
 - AsuraScans 1.1.1: opening a title or refreshing the library failed for some series. The series
   endpoint answers `{ series }` from its cache and `{ data: { series } }` on a cache miss; both

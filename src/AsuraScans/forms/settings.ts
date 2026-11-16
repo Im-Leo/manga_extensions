@@ -8,168 +8,143 @@ import {
   LabelRow,
   Section,
   ToggleRow,
-  type ListSectionElement,
+  type FormSectionElement,
 } from "@paperback/types";
 
 import type { AsuraUser } from "../models";
+import * as session from "../session";
 
-function toBoolean(value: unknown): boolean {
-  return (value ?? false) === "true";
-}
+const SHOW_UPCOMING_KEY = "prerelease";
+const TAGS_KEY = "tags";
 
 export function getShowUpcomingChapters(): boolean {
-  return toBoolean(Application.getState("prerelease"));
+  return Application.getState(SHOW_UPCOMING_KEY) === "true";
 }
 
-export function setHQthumb(value: boolean): void {
-  Application.setState(value.toString(), "HQthumb");
+function setShowUpcomingChapters(value: boolean): void {
+  Application.setState(value.toString(), SHOW_UPCOMING_KEY);
 }
 
-export function setShowUpcomingChapters(value: boolean): void {
-  Application.setState(value.toString(), "prerelease");
+export function clearCachedTags(): void {
+  Application.setState(undefined, TAGS_KEY);
 }
 
-export function clearTags(): void {
-  Application.setState(undefined, "tags");
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
-export async function getAccessToken(): Promise<string> {
-  if (Application.getState("accessToken")) {
-    let url = "https://api.asurascans.com/api/auth/refresh";
-    const [res, buffer] = await Application.scheduleRequest({
-      url,
-      method: "POST",
-      body: JSON.stringify({ refresh_token: Application.getState("refreshToken") }),
-    });
-    if (res.status !== 200) {
-      throw new Error("Access token expired. Please sign in again.");
-    }
-    const responseBody = JSON.parse(Application.arrayBufferToUTF8String(buffer));
-    Application.setState(responseBody.data.access_token, "accessToken");
-    Application.setState(responseBody.data.refresh_token, "refreshToken");
-    Application.setState(responseBody.data.expires_at, "tokenExpiration");
-  }
-  return Application.getState("accessToken") as string;
-}
-
+/**
+ * Account and preferences.
+ *
+ * The credentials live only in this form while it is open: they are sent once,
+ * when Sign In is tapped, and only the resulting tokens are stored.
+ */
 export class AsuraSettingForm extends Form {
-  override getSections() {
-    let sections: ListSectionElement[] = [];
+  private email = "";
+  private password = "";
+  private signInError?: string;
+  private signingIn = false;
 
-    if (
-      Application.getState("user") &&
-      Application.getState("accessToken") &&
-      new Date() < new Date(Application.getState("tokenExpiration") as string)
-    ) {
-      let user = Application.getState("user") as AsuraUser;
-      sections.push(this.getUserSection(user));
-    } else {
-      sections.push(this.getSignInSection());
-    }
-
-    console.log(Application.getState("tokenExpiration") as string);
+  override getSections(): FormSectionElement<unknown>[] {
     return [
-      ...sections,
-      Section("second", [
-        ToggleRow("pre", {
-          title: "Show Upcoming Chapters",
-          value: getShowUpcomingChapters(),
-          onValueChange: Application.Selector(this as AsuraSettingForm, "preChange"),
-        }),
-        ButtonRow("clearTags", {
-          title: "Clear Cached Search Tags",
-          onSelect: Application.Selector(this as AsuraSettingForm, "tagsChange"),
-        }),
-      ]),
+      session.isSignedIn() ? this.accountSection(session.currentUser()) : this.signInSection(),
+      this.preferences(),
     ];
   }
 
-  getUserSection(user: AsuraUser): ListSectionElement {
-    let section: ListSectionElement = Section("user", []);
-
-    section.items.push(
-      LabelRow("username", {
-        title: "Username",
-        value: user?.username ?? "Not Signed In",
-        subtitle: user.id.toString(),
+  private accountSection(user: AsuraUser | undefined): FormSectionElement<unknown> {
+    return Section({ id: "account", header: "Account" }, [
+      LabelRow("user", {
+        title: "Signed in as",
+        value: user?.username ?? "AsuraScans account",
+        subtitle: user?.email,
       }),
-    );
-
-    if (user.description != "") {
-      section.items.push(
-        LabelRow("description", {
-          title: "Description",
-          value: user?.description ?? "No Description",
-        }),
-      );
-    }
-
-    return section;
-  }
-
-  getSignInSection(): ListSectionElement {
-    return Section("signIn", [
-      InputRow("username", {
-        title: "Username",
-        value: (Application.getState("username") as string) ?? "",
-        onValueChange: Application.Selector(this as AsuraSettingForm, "saveUsername"),
-      }),
-      InputRow("password", {
-        title: "Password",
-        value: (Application.getState("password") as string) ?? "",
-        isSecureEntry: true,
-        onValueChange: Application.Selector(this as AsuraSettingForm, "savePassword"),
+      ButtonRow("signOut", {
+        title: "Sign Out",
+        onSelect: Application.Selector(this as AsuraSettingForm, "signOut"),
       }),
     ]);
   }
 
-  async hQthumbChange(value: boolean): Promise<void> {
-    setHQthumb(value);
+  private signInSection(): FormSectionElement<unknown> {
+    return Section(
+      {
+        id: "signIn",
+        header: "Account",
+        footer: "Signing in unlocks early access chapters and reading progress sync.",
+      },
+      [
+        InputRow("email", {
+          title: "Email",
+          value: this.email,
+          onValueChange: Application.Selector(this as AsuraSettingForm, "updateEmail"),
+        }),
+        InputRow("password", {
+          title: "Password",
+          value: this.password,
+          isSecureEntry: true,
+          onValueChange: Application.Selector(this as AsuraSettingForm, "updatePassword"),
+        }),
+        this.signInError
+          ? LabelRow("signInError", { title: this.signInError, style: "error" })
+          : undefined,
+        ButtonRow("signIn", {
+          title: this.signingIn ? "Signing In…" : "Sign In",
+          onSelect: Application.Selector(this as AsuraSettingForm, "signIn"),
+        }),
+      ],
+    );
   }
 
-  async preChange(value: boolean): Promise<void> {
+  private preferences(): FormSectionElement<unknown> {
+    return Section({ id: "preferences", header: "Preferences" }, [
+      ToggleRow("showUpcoming", {
+        title: "Show Upcoming Chapters",
+        value: getShowUpcomingChapters(),
+        onValueChange: Application.Selector(this as AsuraSettingForm, "updateShowUpcoming"),
+      }),
+      ButtonRow("clearTags", {
+        title: "Clear Cached Search Tags",
+        onSelect: Application.Selector(this as AsuraSettingForm, "clearTags"),
+      }),
+    ]);
+  }
+
+  async updateEmail(value: string): Promise<void> {
+    this.email = value.trim();
+  }
+
+  async updatePassword(value: string): Promise<void> {
+    this.password = value;
+  }
+
+  async signIn(): Promise<void> {
+    if (this.signingIn) return;
+    this.signingIn = true;
+    this.signInError = undefined;
+    this.reloadForm();
+
+    try {
+      await session.signIn(this.email, this.password);
+      this.password = "";
+    } catch (error) {
+      this.signInError = messageOf(error);
+    } finally {
+      this.signingIn = false;
+      this.reloadForm();
+    }
+  }
+
+  async signOut(): Promise<void> {
+    session.signOut();
+    this.reloadForm();
+  }
+
+  async updateShowUpcoming(value: boolean): Promise<void> {
     setShowUpcomingChapters(value);
   }
 
-  async tagsChange(): Promise<void> {
-    clearTags();
-  }
-
-  async resetState(): Promise<void> {
-    Application.resetAllState();
-  }
-
-  async oauthLoginSuccess(refreshToken: string, accessToken: string): Promise<void> {
-    Application.setState(refreshToken, "refreshToken");
-    Application.setState(accessToken, "accessToken");
-  }
-
-  async saveUsername(username: string): Promise<void> {
-    Application.setState(username, "username");
-  }
-
-  async savePassword(password: string): Promise<void> {
-    const [, buffer] = await Application.scheduleRequest({
-      headers: {
-        Accept: "*/*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Content-Type": "application/json",
-        "Sec-GPC": "1",
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "same-site",
-        Priority: "u=0",
-      },
-      url: "https://api.asurascans.com/api/auth/login",
-      method: "POST",
-      body: `{"email":"${Application.getState("username") as string}","password":"${password as string}"}`,
-    });
-    const responseBody = JSON.parse(Application.arrayBufferToUTF8String(buffer));
-    Application.setState(responseBody.data.user, "user");
-    Application.setState(responseBody.data.access_token, "accessToken");
-    Application.setState(responseBody.data.refresh_token, "refreshToken");
-    Application.setState(responseBody.data.expires_at, "tokenExpiration");
-
-    this.reloadForm();
+  async clearTags(): Promise<void> {
+    clearCachedTags();
   }
 }

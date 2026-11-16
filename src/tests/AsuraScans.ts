@@ -24,6 +24,7 @@ import {
   seriesUrl,
   trendingUrl,
 } from "../AsuraScans/urls.js";
+import { registerAsuraSessionTests } from "./asurascans-session.js";
 import {
   assertChapter,
   assertSearchResultItem,
@@ -253,6 +254,7 @@ export async function runTests(logger: TestLogger) {
   const suite = new TestSuite("AsuraScans tests", logger);
 
   registerOfflineTests(suite);
+  registerAsuraSessionTests(suite);
 
   if (liveTestsEnabled()) {
     registerDefaultTests(suite, AsuraScans, sourceInfo);

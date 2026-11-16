@@ -4,44 +4,71 @@
 import type {
   ChapterReadActionQueueProcessingResult,
   MangaProgress,
-  Request,
   SourceManga,
   TrackedMangaChapterReadAction,
 } from "@paperback/types";
 
-import { URLBuilder } from "../utils/url-builder/base";
-import { getAccessToken } from "./forms/settings";
-import { AS_API_DOMAIN, type AsuraBookmarkResponse } from "./models";
+import { HttpError, fetchJSON, fetchResponse, isSuccessStatus } from "../utils/network";
+import type { AsuraBookmark, AsuraBookmarkResponse, AsuraScansReadingStatus } from "./models";
+import { isSignedIn, requireAccessToken } from "./session";
+import { bookmarkReadUrl, bookmarkSearchUrl, bookmarkUrl } from "./urls";
 
-async function authorizedRequest(url: string, method: "GET" | "POST"): Promise<Request> {
-  return { url, method, headers: { Authorization: `Bearer ${await getAccessToken()}` } };
+/** Reading progress, which the API stores against a bookmark. */
+
+export interface BookmarkProgress {
+  status: AsuraScansReadingStatus;
+  last_read_chapter: number;
 }
 
-/** Bookmarks are searchable only by title, so the slug decides the real match. */
-async function findBookmark(sourceManga: SourceManga) {
-  const request = await authorizedRequest(
-    new URLBuilder(AS_API_DOMAIN, "repeat")
-      .addPath("api")
-      .addPath("me")
-      .addPath("bookmarks")
-      .addQuery("search", sourceManga.mangaInfo.primaryTitle)
-      .build(),
-    "GET",
-  );
+async function authorization(): Promise<Record<string, string>> {
+  return { Authorization: `Bearer ${await requireAccessToken()}` };
+}
 
-  const [response, buffer] = await Application.scheduleRequest(request);
-  if (response.status !== 200) throw new Error("Failed to fetch manga progress.");
+async function send(url: string, method: "POST" | "PUT", payload?: object): Promise<void> {
+  const headers = await authorization();
+  const { response } = await fetchResponse({
+    url,
+    method,
+    headers: payload ? { ...headers, "Content-Type": "application/json" } : headers,
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
 
-  const bookmarks = JSON.parse(
-    Application.arrayBufferToUTF8String(buffer),
-  ) as AsuraBookmarkResponse;
+  if (!isSuccessStatus(response.status)) throw new HttpError(response.status, url);
+}
+
+/** The numeric series id the bookmark endpoints address; the slug is not accepted there. */
+export function seriesIdOf(sourceManga: SourceManga): string {
+  const id = sourceManga.mangaInfo.additionalInfo?.["id"];
+  if (!id) {
+    throw new Error(
+      `AsuraScans: ${sourceManga.mangaId} has no series id. Refresh the title and try again.`,
+    );
+  }
+  return id;
+}
+
+/** Search matches by title, so the slug decides which result is really this series. */
+export async function findBookmark(sourceManga: SourceManga): Promise<AsuraBookmark | undefined> {
+  const bookmarks = await fetchJSON<AsuraBookmarkResponse>({
+    url: bookmarkSearchUrl(sourceManga.mangaInfo.primaryTitle),
+    method: "GET",
+    headers: await authorization(),
+  });
 
   return bookmarks.data.find((bookmark) => bookmark.series.slug === sourceManga.mangaId);
 }
 
+export async function createBookmark(seriesId: string): Promise<void> {
+  await send(bookmarkUrl(seriesId), "POST");
+}
+
+export async function updateBookmark(seriesId: string, progress: BookmarkProgress): Promise<void> {
+  await send(bookmarkUrl(seriesId), "PUT", progress);
+}
+
 export async function getMangaProgress(sourceManga: SourceManga): Promise<MangaProgress> {
   const bookmark = await findBookmark(sourceManga);
-  if (!bookmark) throw new Error("Manga not found in bookmarks.");
+  if (!bookmark) throw new Error("AsuraScans: this title is not in your bookmarks.");
 
   return {
     sourceManga,
@@ -57,6 +84,10 @@ export async function getMangaProgress(sourceManga: SourceManga): Promise<MangaP
   };
 }
 
+/**
+ * Signed out, nothing is acknowledged either way, so the queue keeps the actions
+ * and syncs them once the user signs in.
+ */
 export async function processChapterReadActionQueue(
   actions: TrackedMangaChapterReadAction[],
 ): Promise<ChapterReadActionQueueProcessingResult> {
@@ -65,7 +96,7 @@ export async function processChapterReadActionQueue(
     failedItems: [],
   };
 
-  if (!Application.getState("user")) return result;
+  if (!isSignedIn()) return result;
 
   // The API stores one high-water mark per title, so only the furthest chapter
   // needs sending; earlier actions in the queue are acknowledged untouched.
@@ -81,52 +112,20 @@ export async function processChapterReadActionQueue(
       continue;
     }
 
-    const seriesId = action.sourceManga.mangaInfo.additionalInfo?.["id"];
-    if (!seriesId) {
-      result.failedItems.push(action.id);
-      continue;
-    }
-
     try {
+      const seriesId = seriesIdOf(action.sourceManga);
       const bookmark = await findBookmark(action.sourceManga);
 
-      // Progress can only be recorded against a bookmark that already exists.
-      if (!bookmark) {
-        const [created] = await Application.scheduleRequest(
-          await authorizedRequest(
-            new URLBuilder(AS_API_DOMAIN, "repeat")
-              .addPath("api")
-              .addPath("bookmarks")
-              .addPath(seriesId)
-              .build(),
-            "POST",
-          ),
-        );
-
-        if (created.status !== 200) {
-          result.failedItems.push(action.id);
-          continue;
-        }
-      } else if ((bookmark.last_read_chapter ?? 0) >= action.chapterNum) {
+      if (bookmark && bookmark.last_read_chapter >= action.chapterNum) {
         result.successfulItems.push(action.id);
         continue;
       }
 
-      const [updated] = await Application.scheduleRequest(
-        await authorizedRequest(
-          new URLBuilder(AS_API_DOMAIN, "repeat")
-            .addPath("api")
-            .addPath("bookmarks")
-            .addPath(seriesId)
-            .addPath("read")
-            .addPath(action.chapterNum.toString())
-            .build(),
-          "POST",
-        ),
-      );
+      // Progress can only be recorded against a bookmark that already exists.
+      if (!bookmark) await createBookmark(seriesId);
+      await send(bookmarkReadUrl(seriesId, action.chapterNum), "POST");
 
-      if (updated.status === 200) result.successfulItems.push(action.id);
-      else result.failedItems.push(action.id);
+      result.successfulItems.push(action.id);
     } catch {
       result.failedItems.push(action.id);
     }
