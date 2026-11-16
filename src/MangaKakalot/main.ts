@@ -98,7 +98,7 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
     metadata: Metadata | undefined,
   ): Promise<PagedResults<DiscoverSectionItem>> {
     const definition = DISCOVER_SECTIONS.find(({ id }) => id === section.id);
-    if (!definition) throw new Error(`Unknown discover section: ${section.id}`);
+    if (!definition) throw new Error(`MangaKakalot: unknown discover section: ${section.id}`);
 
     const page = metadata?.page ?? 1;
     const $ = await fetchCheerio(`${DOMAIN}/manga-list/${definition.path}?page=${page}`);
