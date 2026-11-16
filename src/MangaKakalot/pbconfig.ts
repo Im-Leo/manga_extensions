@@ -3,6 +3,8 @@
 
 import { ContentRating, SourceIntents, type ExtensionInfo } from "@paperback/types";
 
+import { DEVELOPERS } from "../utils/developers";
+
 export default {
   name: "MangaKakalot",
   description: "Extension that pulls content from kakamanga.com.",
@@ -17,5 +19,5 @@ export default {
     SourceIntents.CLOUDFLARE_BYPASS_PROVIDING,
   ],
   badges: [],
-  developers: [{ name: "Im-Leo", github: "https://github.com/Im-Leo" }],
+  developers: DEVELOPERS,
 } satisfies ExtensionInfo;

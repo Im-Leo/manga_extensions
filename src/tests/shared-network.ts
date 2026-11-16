@@ -19,6 +19,8 @@ import { rejectionOf } from "./async.js";
 import { withFakeNetwork } from "./fakes/application.js";
 import type { TestSuite } from "./suite.js";
 
+const BASE = "https://x.com";
+
 /** A promise the test settles by hand, to hold a load in flight. */
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -44,24 +46,24 @@ export function registerSharedNetworkTests(suite: TestSuite): void {
       .build();
 
     expect(url).to.equal("https://api.example.com/v1/series?page=2");
-    expect(new URLBuilder("https://x.com").build(), "no path, no query").to.equal("https://x.com");
+    expect(new URLBuilder(BASE).build(), "no path, no query").to.equal(BASE);
   });
 
   suite.test("URLBuilder: array style is per endpoint, objects skip undefined fields", async () => {
-    const bracket = new URLBuilder("https://x.com").addQuery("ids", ["a", "b"]).build();
-    const repeat = new URLBuilder("https://x.com", "repeat").addQuery("genres", ["a", "b"]).build();
-    const object = new URLBuilder("https://x.com")
+    const bracket = new URLBuilder(BASE).addQuery("ids", ["a", "b"]).build();
+    const repeat = new URLBuilder(BASE, "repeat").addQuery("genres", ["a", "b"]).build();
+    const object = new URLBuilder(BASE)
       .addQuery("order", { title: "asc", year: undefined })
       .build();
 
-    expect(bracket).to.equal("https://x.com?ids[]=a&ids[]=b");
-    expect(repeat).to.equal("https://x.com?genres=a&genres=b");
-    expect(object).to.equal("https://x.com?order[title]=asc");
+    expect(bracket).to.equal(`${BASE}?ids[]=a&ids[]=b`);
+    expect(repeat).to.equal(`${BASE}?genres=a&genres=b`);
+    expect(object).to.equal(`${BASE}?order[title]=asc`);
   });
 
   suite.test("URLBuilder: reset clears paths and query", async () => {
-    const builder = new URLBuilder("https://x.com").addPath("a").addQuery("q", 1);
-    expect(builder.reset().addPath("b").build()).to.equal("https://x.com/b");
+    const builder = new URLBuilder(BASE).addPath("a").addQuery("q", 1);
+    expect(builder.reset().addPath("b").build()).to.equal(`${BASE}/b`);
   });
 
   suite.test("fetchText: success and 304 return the body, failures raise HttpError", async () => {
@@ -72,13 +74,13 @@ export function registerSharedNetworkTests(suite: TestSuite): void {
         ["/broken", { status: 503, body: "<html>maintenance</html>" }],
       ],
       async () => {
-        expect(await fetchText("https://x.com/ok")).to.equal("fine");
-        expect(await fetchText("https://x.com/cached")).to.equal("cached");
+        expect(await fetchText(`${BASE}/ok`)).to.equal("fine");
+        expect(await fetchText(`${BASE}/cached`)).to.equal("cached");
 
-        const error = await rejectionOf(fetchText("https://x.com/broken?token=secret"));
+        const error = await rejectionOf(fetchText(`${BASE}/broken?token=secret`));
         expect(error).to.be.instanceOf(HttpError);
         expect((error as HttpError).status).to.equal(503);
-        expect(error.message, "names the endpoint").to.contain("https://x.com/broken");
+        expect(error.message, "names the endpoint").to.contain(`${BASE}/broken`);
         expect(error.message, "but not its query").to.not.contain("secret");
       },
     );
@@ -91,11 +93,11 @@ export function registerSharedNetworkTests(suite: TestSuite): void {
         ["/challenge", { body: "<!DOCTYPE html><title>Just a moment...</title>" }],
       ],
       async () => {
-        expect(await fetchJSON<{ items: number[] }>("https://x.com/json")).to.deep.equal({
+        expect(await fetchJSON<{ items: number[] }>(`${BASE}/json`)).to.deep.equal({
           items: [1, 2],
         });
 
-        const error = await rejectionOf(fetchJSON("https://x.com/challenge"));
+        const error = await rejectionOf(fetchJSON(`${BASE}/challenge`));
         expect(error).to.be.instanceOf(InvalidResponseError);
       },
     );
@@ -103,7 +105,7 @@ export function registerSharedNetworkTests(suite: TestSuite): void {
 
   suite.test("fetchResponse: leaves the status for the caller to judge", async () => {
     await withFakeNetwork([["/gone", { status: 404, body: '{"notFound":true}' }]], async () => {
-      const { response, body } = await fetchResponse("https://x.com/gone");
+      const { response, body } = await fetchResponse(`${BASE}/gone`);
       expect(response.status).to.equal(404);
       expect(body).to.equal('{"notFound":true}');
     });

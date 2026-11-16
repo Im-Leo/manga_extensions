@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
+import { DOMAIN } from "../../MangaKakalot/models.js";
+
 /**
  * Hand-written markup carrying only what each selector reads. The three entries
  * differ in image attribute and href shape, so one fixture covers every branch
@@ -9,18 +11,18 @@
 export const LISTING_HTML = `
 <html><body>
   <div class="list-comic-item-wrap">
-    <a href="https://www.kakamanga.com/manga/alpha-title/"><img
+    <a href="${DOMAIN}/manga/alpha-title/"><img
       alt="Alpha Title" src="https://img.example.com/placeholder.gif"
       data-src="https://img-r1.2xstorage.com/thumb/alpha.webp"></a>
     <a class="list-story-item-wrap-chapter" href="#">Chapter 12</a>
   </div>
   <div class="list-comic-item-wrap">
-    <a href="https://www.kakamanga.com/manga/beta-title"><img
+    <a href="${DOMAIN}/manga/beta-title"><img
       alt="Beta &amp; Friends" src="/uploads/beta.webp"></a>
     <a class="list-story-item-wrap-chapter" href="#">Chapter 3</a>
   </div>
   <div class="list-comic-item-wrap">
-    <a href="https://www.kakamanga.com/manga/gamma-title/"><img
+    <a href="${DOMAIN}/manga/gamma-title/"><img
       alt="Gamma" src="http://img-r2.2xstorage.com/thumb/gamma.webp"></a>
     <a class="list-story-item-wrap-chapter" href="#">Chapter 1</a>
   </div>
@@ -33,7 +35,7 @@ export const LISTING_HTML = `
 export const LISTING_SINGLE_PAGE_HTML = `
 <html><body>
   <div class="list-comic-item-wrap">
-    <a href="https://www.kakamanga.com/manga/solo/"><img alt="Solo" src="https://cdn.example.com/s.webp"></a>
+    <a href="${DOMAIN}/manga/solo/"><img alt="Solo" src="https://cdn.example.com/s.webp"></a>
   </div>
 </body></html>`;
 
@@ -47,7 +49,7 @@ export const LISTING_LAST_PAGE_HTML = `
 export const LISTING_WITH_INVALID_ENTRY_HTML = `
 <html><body>
   <div class="list-comic-item-wrap">
-    <a href="https://www.kakamanga.com/manga/valid-one/"><img alt="Valid One" src="https://cdn.example.com/v.webp"></a>
+    <a href="${DOMAIN}/manga/valid-one/"><img alt="Valid One" src="https://cdn.example.com/v.webp"></a>
   </div>
   <div class="list-comic-item-wrap">
     <a href=""><img alt="" src=""></a>
@@ -57,7 +59,7 @@ export const LISTING_WITH_INVALID_ENTRY_HTML = `
 export const SEARCH_HTML = `
 <html><body>
   <div class="story_item">
-    <a href="https://www.kakamanga.com/manga/searched-title/"></a>
+    <a href="${DOMAIN}/manga/searched-title/"></a>
     <img alt="Searched Title" src="https://img-r1.2xstorage.com/thumb/searched.webp">
     <h3 class="story_name"><a href="#">Searched Title</a></h3>
     <em class="story_chapter"><a href="#">Chapter 44</a></em>

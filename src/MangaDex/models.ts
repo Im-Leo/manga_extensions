@@ -14,6 +14,9 @@ export const MANGADEX_DOMAIN = "https://mangadex.org";
 export const MANGADEX_API = "https://api.mangadex.org";
 export const COVER_BASE_URL = "https://uploads.mangadex.org/covers";
 
+/** `additionalInfo` key holding the id of a title's newest chapter, used to skip unchanged titles. */
+export const LATEST_CHAPTER_INFO_KEY = "latestUploadedChapter";
+
 const MANGADEX_AUTH_BASE = "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect";
 export const MANGADEX_AUTH_AUTHORIZE_URL = `${MANGADEX_AUTH_BASE}/auth`;
 export const MANGADEX_AUTH_TOKEN_URL = `${MANGADEX_AUTH_BASE}/token`;

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
+import { JSON_HEADERS } from "../utils/network";
 import { fetchJSON } from "./network";
 import { buildLegacyMappingUrl } from "./urls";
 import { chunk } from "./utils";
@@ -84,7 +85,7 @@ async function resolveLegacyId(id: string, type: "manga" | "chapter"): Promise<s
       const response = await fetchJSON<LegacyMappingResponse>({
         url: buildLegacyMappingUrl(),
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: JSON_HEADERS,
         body: JSON.stringify({ type, ids: [numeric] }),
       });
       const rawNewId = response.data?.find((d) => d.attributes?.legacyId === numeric)?.attributes
@@ -147,7 +148,7 @@ export async function resolveMangaIds(ids: string[]): Promise<Record<string, str
           fetchJSON<LegacyMappingResponse>({
             url: buildLegacyMappingUrl(),
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: JSON_HEADERS,
             body: JSON.stringify({ type: "manga", ids: batch }),
           }),
         ),

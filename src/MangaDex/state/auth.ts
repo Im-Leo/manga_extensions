@@ -12,6 +12,9 @@ import { parseJSONBody } from "../utils";
  * cache is cold, because every authenticated request consults them.
  */
 
+/** Secure-storage keys for the session tokens. */
+const SECURE_KEYS = { accessToken: "access_token", refreshToken: "refresh_token" } as const;
+
 let cachedTokenResult: AccessToken | undefined = undefined;
 let cacheValid = false;
 
@@ -45,16 +48,16 @@ export function isAuthInvalidError(err: unknown): boolean {
 export function getAccessToken(): AccessToken | undefined {
   if (cacheValid) return cachedTokenResult;
 
-  const accessToken = Application.getSecureState("access_token") as string | undefined;
+  const accessToken = Application.getSecureState(SECURE_KEYS.accessToken) as string | undefined;
   if (!accessToken) {
-    const orphan = Application.getSecureState("refresh_token") as string | undefined;
-    if (orphan) Application.setSecureState(undefined, "refresh_token");
+    const orphan = Application.getSecureState(SECURE_KEYS.refreshToken) as string | undefined;
+    if (orphan) Application.setSecureState(undefined, SECURE_KEYS.refreshToken);
     cachedTokenResult = undefined;
     cacheValid = true;
     return undefined;
   }
 
-  const refreshToken = Application.getSecureState("refresh_token") as string | undefined;
+  const refreshToken = Application.getSecureState(SECURE_KEYS.refreshToken) as string | undefined;
   const parsed = readJwtBody(accessToken);
   if (!parsed) {
     return saveAccessToken(undefined, undefined);
@@ -76,8 +79,8 @@ export function saveAccessToken(
   refreshToken: string | undefined,
 ): AccessToken | undefined {
   if (!accessToken) {
-    Application.setSecureState(undefined, "access_token");
-    Application.setSecureState(undefined, "refresh_token");
+    Application.setSecureState(undefined, SECURE_KEYS.accessToken);
+    Application.setSecureState(undefined, SECURE_KEYS.refreshToken);
     cachedTokenResult = undefined;
     cacheValid = true;
     return undefined;
@@ -85,14 +88,14 @@ export function saveAccessToken(
 
   const parsed = readJwtBody(accessToken);
   if (!parsed) {
-    Application.setSecureState(undefined, "access_token");
-    Application.setSecureState(undefined, "refresh_token");
+    Application.setSecureState(undefined, SECURE_KEYS.accessToken);
+    Application.setSecureState(undefined, SECURE_KEYS.refreshToken);
     cachedTokenResult = undefined;
     cacheValid = true;
     return undefined;
   }
-  Application.setSecureState(accessToken, "access_token");
-  Application.setSecureState(refreshToken, "refresh_token");
+  Application.setSecureState(accessToken, SECURE_KEYS.accessToken);
+  Application.setSecureState(refreshToken, SECURE_KEYS.refreshToken);
   cachedTokenResult = { accessToken, refreshToken, tokenBody: parsed };
   cacheValid = true;
   return cachedTokenResult;

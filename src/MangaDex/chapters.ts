@@ -14,6 +14,7 @@ import { isGroupNameBlocked, isRatingAllowed } from "./chapter-utils";
 import { MDLanguages } from "./languages";
 import { resolveChapterId, resolveMangaId } from "./legacy";
 import { getMangaDetails } from "./manga";
+import { LATEST_CHAPTER_INFO_KEY } from "./models";
 import type { ChapterDetailsResponse, ChapterRelationship, ChapterResponse } from "./models";
 import { fetchJSON } from "./network";
 import {
@@ -82,9 +83,9 @@ export async function getChapters(
     };
     if (
       updatedManga.mangaInfo.additionalInfo &&
-      !("latestUploadedChapter" in updatedManga.mangaInfo.additionalInfo)
+      !(LATEST_CHAPTER_INFO_KEY in updatedManga.mangaInfo.additionalInfo)
     ) {
-      delete mergedAdditionalInfo["latestUploadedChapter"];
+      delete mergedAdditionalInfo[LATEST_CHAPTER_INFO_KEY];
     }
     sourceManga.mangaInfo.additionalInfo = mergedAdditionalInfo;
     mangaDetailsFreshlyFetched = true;
@@ -290,7 +291,7 @@ export async function getChapters(
   let nextLatestChapter: string | null | undefined = verifiedLatestChapterId ?? undefined;
   if (nextLatestChapter === undefined && optimizeUpdates) {
     if (mangaDetailsFreshlyFetched) {
-      nextLatestChapter = sourceManga.mangaInfo.additionalInfo?.["latestUploadedChapter"] ?? null;
+      nextLatestChapter = sourceManga.mangaInfo.additionalInfo?.[LATEST_CHAPTER_INFO_KEY] ?? null;
     } else {
       try {
         nextLatestChapter = await fetchLatestUploadedChapter(mangaId);
@@ -300,15 +301,15 @@ export async function getChapters(
   if (typeof nextLatestChapter === "string") {
     sourceManga.mangaInfo.additionalInfo = {
       ...sourceManga.mangaInfo.additionalInfo,
-      latestUploadedChapter: nextLatestChapter,
+      [LATEST_CHAPTER_INFO_KEY]: nextLatestChapter,
     };
   } else if (
     nextLatestChapter === null &&
     sourceManga.mangaInfo.additionalInfo &&
-    "latestUploadedChapter" in sourceManga.mangaInfo.additionalInfo
+    LATEST_CHAPTER_INFO_KEY in sourceManga.mangaInfo.additionalInfo
   ) {
     const next = { ...sourceManga.mangaInfo.additionalInfo };
-    delete next["latestUploadedChapter"];
+    delete next[LATEST_CHAPTER_INFO_KEY];
     sourceManga.mangaInfo.additionalInfo = next;
   }
 

@@ -19,6 +19,11 @@ import type { CheerioAPI } from "cheerio";
 
 export type RequestInput = string | Request;
 
+export const JSON_MEDIA_TYPE = "application/json";
+
+/** Headers for a request carrying a JSON body. */
+export const JSON_HEADERS: Readonly<Record<string, string>> = { "Content-Type": JSON_MEDIA_TYPE };
+
 /** Endpoint without its query, so an error names the route rather than every parameter. */
 function endpoint(url: string): string {
   return url.split("?")[0] ?? url;

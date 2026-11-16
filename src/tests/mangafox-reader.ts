@@ -4,6 +4,7 @@
 import { expect } from "chai";
 import * as cheerio from "cheerio";
 
+import { DOMAIN } from "../MangaFox/models.js";
 import {
   extractChapterPages,
   extractFallbackPages,
@@ -26,7 +27,10 @@ import {
 } from "./fixtures/mangafox-reader.js";
 import type { TestSuite } from "./suite.js";
 
-const CHAPTER_URL = "https://fanfox.net/manga/onepunch_man/v01/c001/1.html";
+const FIRST_PAGE = "page=1&";
+const SECOND_PAGE = "page=2&";
+
+const CHAPTER_URL = `${DOMAIN}/manga/onepunch_man/v01/c001/1.html`;
 
 /** Fails the first `failures` requests, then answers with `body`. */
 function flaky(failures: number, body: string): FakeRoute {
@@ -84,7 +88,7 @@ export function registerMangaFoxReaderTests(suite: TestSuite): void {
 
         expect(pages).to.deep.equal([PAGE_1_URL, PAGE_2_URL]);
         expect(network.requests[0]?.url).to.equal(
-          `https://fanfox.net/manga/onepunch_man/v01/c001/chapterfun.ashx?cid=184674&page=1&key=${KEY}`,
+          `${DOMAIN}/manga/onepunch_man/v01/c001/chapterfun.ashx?cid=184674&page=1&key=${KEY}`,
         );
         expect(network.requests[1]?.url, "no key after page 1").to.match(/page=2&key=$/);
         expect(network.requests[0]?.headers?.["Referer"]).to.equal(CHAPTER_URL);
@@ -95,14 +99,14 @@ export function registerMangaFoxReaderTests(suite: TestSuite): void {
   suite.test("paginated: a transient page failure is retried", async () => {
     await withFakeNetwork(
       [
-        ["page=1&", { body: PAGE_PAYLOAD_1 }],
-        ["page=2&", flaky(2, PAGE_PAYLOAD_2)],
+        [FIRST_PAGE, { body: PAGE_PAYLOAD_1 }],
+        [SECOND_PAGE, flaky(2, PAGE_PAYLOAD_2)],
       ],
       async (network) => {
         const pages = await extractChapterPages(cheerio.load(PAGINATED_CHAPTER_HTML), CHAPTER_URL);
 
         expect(pages).to.deep.equal([PAGE_1_URL, PAGE_2_URL]);
-        expect(network.count("page=2&")).to.equal(3);
+        expect(network.count(SECOND_PAGE)).to.equal(3);
       },
     );
   });
@@ -110,8 +114,8 @@ export function registerMangaFoxReaderTests(suite: TestSuite): void {
   suite.test("paginated: a page that never loads fails the chapter, not silently", async () => {
     await withFakeNetwork(
       [
-        ["page=1&", { body: PAGE_PAYLOAD_1 }],
-        ["page=2&", { body: "<html>error</html>" }],
+        [FIRST_PAGE, { body: PAGE_PAYLOAD_1 }],
+        [SECOND_PAGE, { body: "<html>error</html>" }],
       ],
       async () => {
         const error = await rejectionOf(

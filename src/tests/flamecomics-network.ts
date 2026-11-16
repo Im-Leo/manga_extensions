@@ -17,6 +17,10 @@ import {
 } from "./fixtures/flamecomics.js";
 import type { TestSuite } from "./suite.js";
 
+const SERIES_ROUTE = "/series/1.json";
+const BUILD_ID = "build-1";
+const NEXT_BUILD_ID = "build-2";
+
 /** The homepage alone; a substring would also match every data route. */
 const HOME = /flamecomics\.xyz\/$/;
 
@@ -47,7 +51,7 @@ const CATALOG_ROUTES: RouteTable = [
     },
   ],
   ["/api/series", { body: SIMPLE_SERIES }],
-  [HOME, buildIds("build-1")],
+  [HOME, buildIds(BUILD_ID)],
 ];
 
 /**
@@ -61,7 +65,7 @@ export function registerFlameNetworkTests(suite: TestSuite): void {
     await withFakeNetwork(
       [
         ["/index.json", { body: HOMEPAGE }],
-        [HOME, buildIds("build-1")],
+        [HOME, buildIds(BUILD_ID)],
       ],
       async (network) => {
         await Promise.all(
@@ -79,14 +83,14 @@ export function registerFlameNetworkTests(suite: TestSuite): void {
 
     await withFakeNetwork(
       [
-        ["/series/1.json", { body: SERIES_DETAIL }],
-        [HOME, buildIds("build-1")],
+        [SERIES_ROUTE, { body: SERIES_DETAIL }],
+        [HOME, buildIds(BUILD_ID)],
       ],
       async (network) => {
         await extension.getMangaDetails("1");
         await extension.getChapters(SOURCE_MANGA);
 
-        expect(network.count("/series/1.json")).to.equal(1);
+        expect(network.count(SERIES_ROUTE)).to.equal(1);
       },
     );
   });
@@ -96,16 +100,16 @@ export function registerFlameNetworkTests(suite: TestSuite): void {
 
     await withFakeNetwork(
       [
-        ["/build-1/series/1.json", { status: 404, body: STALE_BUILD_PAYLOAD }],
-        ["/build-2/series/1.json", { body: SERIES_DETAIL }],
-        [HOME, buildIds("build-1", "build-2")],
+        [`/${BUILD_ID}${SERIES_ROUTE}`, { status: 404, body: STALE_BUILD_PAYLOAD }],
+        [`/${NEXT_BUILD_ID}${SERIES_ROUTE}`, { body: SERIES_DETAIL }],
+        [HOME, buildIds(BUILD_ID, NEXT_BUILD_ID)],
       ],
       async (network) => {
         const manga = await extension.getMangaDetails("1");
 
         expect(manga.mangaId).to.equal("1");
         expect(network.count(HOME), "re-read once").to.equal(2);
-        expect(network.count("/series/1.json"), "stale, then fresh").to.equal(2);
+        expect(network.count(SERIES_ROUTE), "stale, then fresh").to.equal(2);
       },
     );
   });
@@ -115,8 +119,8 @@ export function registerFlameNetworkTests(suite: TestSuite): void {
 
     await withFakeNetwork(
       [
-        ["/series/1.json", { status: 404, body: NOT_FOUND_PAYLOAD }],
-        [HOME, buildIds("build-1", "build-2")],
+        [SERIES_ROUTE, { status: 404, body: NOT_FOUND_PAYLOAD }],
+        [HOME, buildIds(BUILD_ID, NEXT_BUILD_ID)],
       ],
       async (network) => {
         const error = await rejectionOf(extension.getMangaDetails("1"));
@@ -132,14 +136,14 @@ export function registerFlameNetworkTests(suite: TestSuite): void {
 
     await withFakeNetwork(
       [
-        ["/series/1.json", { status: 404, body: STALE_BUILD_PAYLOAD }],
-        [HOME, buildIds("build-1")],
+        [SERIES_ROUTE, { status: 404, body: STALE_BUILD_PAYLOAD }],
+        [HOME, buildIds(BUILD_ID)],
       ],
       async (network) => {
         const error = await rejectionOf(extension.getMangaDetails("1"));
 
         expect(error.message).to.contain("empty payload");
-        expect(network.count("/series/1.json"), "one attempt, no retry").to.equal(1);
+        expect(network.count(SERIES_ROUTE), "one attempt, no retry").to.equal(1);
       },
     );
   });

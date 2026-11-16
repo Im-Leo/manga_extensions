@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
+import { AS_DOMAIN } from "../../AsuraScans/models.js";
 import type { AsuraChapter, AsuraManga } from "../../AsuraScans/models.js";
 
 /**
@@ -46,7 +47,7 @@ export function makeManga(overrides: Partial<AsuraManga> = {}): AsuraManga {
     last_chapter_at: "2026-01-10T00:00:00Z",
     created_at: "2025-01-01T00:00:00Z",
     updated_at: "2026-01-10T00:00:00Z",
-    public_url: "https://asurascans.com/series/example-series",
+    public_url: `${AS_DOMAIN}/series/example-series`,
     source_url: "",
     genres: [{ id: 1, slug: "action", name: "Action" }],
     latest_chapters: [makeChapter()],

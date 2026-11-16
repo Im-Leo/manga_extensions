@@ -12,7 +12,12 @@ import {
 import { isRatingAllowed } from "../MangaDex/chapter-utils.js";
 import { swapItems } from "../MangaDex/forms/reorderable.js";
 import { MangaDex } from "../MangaDex/main.js";
-import { OriginalLanguage, RelationshipType, type Relationship } from "../MangaDex/models.js";
+import {
+  MANGADEX_DOMAIN,
+  OriginalLanguage,
+  type Relationship,
+  RelationshipType,
+} from "../MangaDex/models.js";
 import sourceInfo from "../MangaDex/pbconfig.js";
 import {
   buildCoverImageUrl,
@@ -40,9 +45,7 @@ import {
   reorderById,
   shouldSkipByCount,
 } from "../MangaDex/utils.js";
-import { assertUniqueInterceptorIds } from "./contracts.js";
-import { liveTestsEnabled } from "./live-tests.js";
-import { TestSuite, registerDefaultTests } from "./suite.js";
+import { TestSuite, registerSourceTests } from "./suite.js";
 
 function relationship(type: RelationshipType, fileName?: string): Relationship {
   const base = { id: `r-${type}`, type };
@@ -201,14 +204,14 @@ function registerHelperTests(suite: TestSuite): void {
 
   suite.test("dispatchSearch: a pasted URL opens the entry directly", async () => {
     // The query box doubles as an address bar, so a link is a lookup, not a search.
-    expect(dispatchSearch("https://mangadex.org/title/" + UUID)).to.deep.equal({
+    expect(dispatchSearch(`${MANGADEX_DOMAIN}/title/` + UUID)).to.deep.equal({
       prefix: "id",
       uuid: UUID,
     });
-    expect(dispatchSearch("https://mangadex.org/chapter/" + UUID)?.prefix).to.equal("ch");
+    expect(dispatchSearch(`${MANGADEX_DOMAIN}/chapter/` + UUID)?.prefix).to.equal("ch");
 
     // Ids are lowercased because the API returns one case and callers key by it.
-    expect(dispatchSearch("https://mangadex.org/title/" + UUID.toUpperCase())?.uuid).to.equal(UUID);
+    expect(dispatchSearch(`${MANGADEX_DOMAIN}/title/` + UUID.toUpperCase())?.uuid).to.equal(UUID);
   });
 
   suite.test("dispatchSearch: prefix form, including the pre-v5 numeric ids", async () => {
@@ -216,7 +219,7 @@ function registerHelperTests(suite: TestSuite): void {
     expect(dispatchSearch(`grp:${UUID}`)?.prefix).to.equal("grp");
 
     // Numeric ids still circulate in old links and resolve through /legacy/mapping.
-    expect(dispatchSearch("https://mangadex.org/title/12345")).to.deep.equal({
+    expect(dispatchSearch(`${MANGADEX_DOMAIN}/title/12345`)).to.deep.equal({
       prefix: "id",
       uuid: "12345",
     });
@@ -367,10 +370,6 @@ function registerHelperTests(suite: TestSuite): void {
 }
 
 function registerContractTests(suite: TestSuite): void {
-  suite.test("interceptor ids are unique", async () => {
-    assertUniqueInterceptorIds(MangaDex, "MangaDex");
-  });
-
   suite.test("declares discover sections with unique ids and types", async () => {
     const sections = await MangaDex.getDiscoverSections();
 
@@ -405,13 +404,9 @@ export async function runTests(logger: TestLogger) {
   registerHelperTests(suite);
   registerContractTests(suite);
 
-  if (liveTestsEnabled()) {
-    registerDefaultTests(suite, MangaDex, sourceInfo, {
-      mangaProviding: { getMangaDetails: [LIVE_MANGA_ID] },
-    });
-  } else {
-    suite.skip("live end-to-end", "set PB_LIVE=1 to run network tests");
-  }
+  registerSourceTests(suite, MangaDex, sourceInfo, {
+    mangaProviding: { getMangaDetails: [LIVE_MANGA_ID] },
+  });
 
   await suite.run();
 }

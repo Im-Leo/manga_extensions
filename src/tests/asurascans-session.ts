@@ -7,6 +7,7 @@ import { expect } from "chai";
 import { TrackingForm } from "../AsuraScans/forms/progress.js";
 import { AsuraSettingForm } from "../AsuraScans/forms/settings.js";
 import { AsuraScans } from "../AsuraScans/main.js";
+import { AS_API_DOMAIN } from "../AsuraScans/models.js";
 import * as session from "../AsuraScans/session.js";
 import { getMangaProgress, processChapterReadActionQueue } from "../AsuraScans/tracking.js";
 import { bookmarkSearchUrl } from "../AsuraScans/urls.js";
@@ -15,9 +16,16 @@ import { rejectionOf } from "./async.js";
 import { requestBodyText, withFakeNetwork, type FakeRoute } from "./fakes/application.js";
 import type { TestSuite } from "./suite.js";
 
+const BOOKMARK_SEARCH = "/me/bookmarks";
+const LOGIN = "/auth/login";
+const REFRESH = "/auth/refresh";
+const READER = "/chapters/1";
+const EMAIL = "reader@example.com";
+const PASSWORD = "secret";
+
 const HOUR = 60 * 60 * 1000;
 
-const USER = { id: 7, username: "reader", email: "reader@example.com" };
+const USER = { id: 7, username: "reader", email: EMAIL };
 
 function tokens(access: string, refresh: string, expiresInMs: number): FakeRoute {
   return {
@@ -34,8 +42,8 @@ function tokens(access: string, refresh: string, expiresInMs: number): FakeRoute
 
 /** Signs in through the real code path, leaving a session that expires in `expiresInMs`. */
 async function signInWith(expiresInMs: number): Promise<void> {
-  await withFakeNetwork([["/auth/login", tokens("access-1", "refresh-1", expiresInMs)]], () =>
-    session.signIn("reader@example.com", "secret"),
+  await withFakeNetwork([[LOGIN, tokens("access-1", "refresh-1", expiresInMs)]], () =>
+    session.signIn(EMAIL, PASSWORD),
   );
 }
 
@@ -116,14 +124,14 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
     session.signOut();
     const password = 'p"a\\ss}{,';
 
-    await withFakeNetwork([["/auth/login", tokens("a", "r", HOUR)]], async (network) => {
-      await session.signIn("reader@example.com", password);
+    await withFakeNetwork([[LOGIN, tokens("a", "r", HOUR)]], async (network) => {
+      await session.signIn(EMAIL, password);
 
       const request = network.requests[0];
       expect(request?.method).to.equal("POST");
       expect(request?.headers?.["Content-Type"]).to.equal("application/json");
       expect(JSON.parse(requestBodyText(request!))).to.deep.equal({
-        email: "reader@example.com",
+        email: EMAIL,
         password,
       });
     });
@@ -145,21 +153,18 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
   suite.test("signIn: wrong credentials say so; an outage does not pose as one", async () => {
     session.signOut();
 
-    await withFakeNetwork(
-      [["/auth/login", { status: 401, body: { message: "nope" } }]],
-      async () => {
-        const error = await rejectionOf(session.signIn("reader@example.com", "wrong"));
-        expect(error.message).to.contain("invalid email or password");
-      },
-    );
+    await withFakeNetwork([[LOGIN, { status: 401, body: { message: "nope" } }]], async () => {
+      const error = await rejectionOf(session.signIn(EMAIL, "wrong"));
+      expect(error.message).to.contain("invalid email or password");
+    });
 
-    await withFakeNetwork([["/auth/login", { status: 503, body: "down" }]], async () => {
-      const error = await rejectionOf(session.signIn("reader@example.com", "secret"));
+    await withFakeNetwork([[LOGIN, { status: 503, body: "down" }]], async () => {
+      const error = await rejectionOf(session.signIn(EMAIL, PASSWORD));
       expect(error).to.be.instanceOf(HttpError);
     });
 
     await withFakeNetwork([], async (network) => {
-      await rejectionOf(session.signIn("", "secret"));
+      await rejectionOf(session.signIn("", PASSWORD));
       expect(network.requests, "an empty field is caught before any request").to.have.lengthOf(0);
     });
 
@@ -180,25 +185,19 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
     session.signOut();
     await signInWith(10_000);
 
-    await withFakeNetwork(
-      [["/auth/refresh", tokens("access-2", "refresh-2", HOUR)]],
-      async (network) => {
-        const results = await Promise.all([
-          session.getAccessToken(),
-          session.getAccessToken(),
-          session.getAccessToken(),
-        ]);
+    await withFakeNetwork([[REFRESH, tokens("access-2", "refresh-2", HOUR)]], async (network) => {
+      const results = await Promise.all([
+        session.getAccessToken(),
+        session.getAccessToken(),
+        session.getAccessToken(),
+      ]);
 
-        expect(results).to.deep.equal(["access-2", "access-2", "access-2"]);
-        expect(
-          network.count("/auth/refresh"),
-          "a second refresh would reuse a rotated token",
-        ).to.equal(1);
-        expect(JSON.parse(requestBodyText(network.requests[0]!))).to.deep.equal({
-          refresh_token: "refresh-1",
-        });
-      },
-    );
+      expect(results).to.deep.equal(["access-2", "access-2", "access-2"]);
+      expect(network.count(REFRESH), "a second refresh would reuse a rotated token").to.equal(1);
+      expect(JSON.parse(requestBodyText(network.requests[0]!))).to.deep.equal({
+        refresh_token: "refresh-1",
+      });
+    });
 
     await withFakeNetwork([], async (network) => {
       expect(await session.getAccessToken(), "the rotated token is stored").to.equal("access-2");
@@ -210,12 +209,12 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
     session.signOut();
     await signInWith(10_000);
 
-    await withFakeNetwork([["/auth/refresh", { status: 503 }]], async () => {
+    await withFakeNetwork([[REFRESH, { status: 503 }]], async () => {
       await rejectionOf(session.getAccessToken());
     });
     expect(session.isSignedIn(), "an outage keeps the session").to.equal(true);
 
-    await withFakeNetwork([["/auth/refresh", { status: 401 }]], async () => {
+    await withFakeNetwork([[REFRESH, { status: 401 }]], async () => {
       const error = await rejectionOf(session.getAccessToken());
       expect(error.message).to.contain("session expired");
     });
@@ -253,8 +252,8 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
 
       await withFakeNetwork(
         [
-          ["/auth/refresh", { status: 503 }],
-          ["/chapters/1", PAGES],
+          [REFRESH, { status: 503 }],
+          [READER, PAGES],
         ],
         async (network) => {
           const details = await AsuraScans.getChapterDetails(chapter(false));
@@ -262,7 +261,7 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
             .to.have.property("pages")
             .that.deep.equals(["https://cdn.example.com/1.webp"]);
 
-          const reader = network.requests.find((request) => request.url.includes("/chapters/1"));
+          const reader = network.requests.find((request) => request.url.includes(READER));
           expect(reader?.headers?.["Authorization"], "no token to send").to.equal(undefined);
         },
       );
@@ -273,7 +272,7 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
     // Recorded shape: the API answers 200 with `is_locked` and no `pages`.
     session.signOut();
 
-    await withFakeNetwork([["/chapters/1", LOCKED]], async (network) => {
+    await withFakeNetwork([[READER, LOCKED]], async (network) => {
       const error = await rejectionOf(AsuraScans.getChapterDetails(chapter(true)));
 
       expect(error.message).to.contain("chapter 1 is early access");
@@ -287,7 +286,7 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
     session.signOut();
     await signInWith(HOUR);
 
-    await withFakeNetwork([["/chapters/1", LOCKED]], async (network) => {
+    await withFakeNetwork([[READER, LOCKED]], async (network) => {
       const error = await rejectionOf(AsuraScans.getChapterDetails(chapter(true)));
 
       expect(error.message).to.contain("does not have early access");
@@ -299,7 +298,7 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
     session.signOut();
     await signInWith(HOUR);
 
-    await withFakeNetwork([["/chapters/1", PAGES]], async (network) => {
+    await withFakeNetwork([[READER, PAGES]], async (network) => {
       await AsuraScans.getChapterDetails(chapter(true));
       expect(network.requests[0]?.headers?.["Authorization"]).to.equal("Bearer access-1");
     });
@@ -307,7 +306,7 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
 
   suite.test("bookmarkSearchUrl: encodes the title", async () => {
     expect(bookmarkSearchUrl("Tom & Jerry #1?")).to.equal(
-      "https://api.asurascans.com/api/me/bookmarks?search=Tom%20%26%20Jerry%20%231%3F",
+      `${AS_API_DOMAIN}/api/me/bookmarks?search=Tom%20%26%20Jerry%20%231%3F`,
     );
   });
 
@@ -319,7 +318,7 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
 
       await withFakeNetwork(
         [
-          ["/me/bookmarks", { body: { data: [], meta: { total: 0 } } }],
+          [BOOKMARK_SEARCH, { body: { data: [], meta: { total: 0 } } }],
           ["/bookmarks/42/read/5", { body: {} }],
           ["/bookmarks/42", { status: 201, body: {} }],
         ],
@@ -334,9 +333,9 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
           expect(
             network.requests.map((request) => `${request.method} ${request.url}`),
           ).to.deep.equal([
-            "GET https://api.asurascans.com/api/me/bookmarks?search=Tom%20%26%20Jerry%20%231%3F",
-            "POST https://api.asurascans.com/api/bookmarks/42",
-            "POST https://api.asurascans.com/api/bookmarks/42/read/5",
+            `GET ${AS_API_DOMAIN}/api/me/bookmarks?search=Tom%20%26%20Jerry%20%231%3F`,
+            `POST ${AS_API_DOMAIN}/api/bookmarks/42`,
+            `POST ${AS_API_DOMAIN}/api/bookmarks/42/read/5`,
           ]);
         },
       );
@@ -353,7 +352,7 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
 
     await signInWith(HOUR);
     await withFakeNetwork(
-      [["/me/bookmarks", { body: { data: [], meta: { total: 0 } } }]],
+      [[BOOKMARK_SEARCH, { body: { data: [], meta: { total: 0 } } }]],
       async () => {
         expect(await getMangaProgress(SOURCE_MANGA, noChapters), "not bookmarked").to.equal(
           undefined,
@@ -361,7 +360,7 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
       },
     );
 
-    await withFakeNetwork([["/me/bookmarks", { status: 500 }]], async () => {
+    await withFakeNetwork([[BOOKMARK_SEARCH, { status: 500 }]], async () => {
       expect(await getMangaProgress(SOURCE_MANGA, noChapters), "lookup failed").to.equal(undefined);
     });
   });
@@ -374,7 +373,7 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
       (chapNum) => ({ chapterId: `90${chapNum}`, chapNum, sourceManga: SOURCE_MANGA }) as Chapter,
     );
 
-    await withFakeNetwork([["/me/bookmarks", bookmark(111, "2026-11-01T10:00:00Z")]], async () => {
+    await withFakeNetwork([[BOOKMARK_SEARCH, bookmark(111, "2026-11-01T10:00:00Z")]], async () => {
       const progress = await getMangaProgress(SOURCE_MANGA, async () => chapters);
 
       expect(progress?.lastReadChapter.chapterId, "the API's chapter id, not the number").to.equal(
@@ -383,12 +382,12 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
       expect(progress?.lastReadTime?.toISOString()).to.equal("2026-11-01T10:00:00.000Z");
     });
 
-    await withFakeNetwork([["/me/bookmarks", bookmark(111, "not a date")]], async () => {
+    await withFakeNetwork([[BOOKMARK_SEARCH, bookmark(111, "not a date")]], async () => {
       const progress = await getMangaProgress(SOURCE_MANGA, async () => chapters);
       expect(progress?.lastReadTime, "an invalid date is omitted").to.equal(undefined);
     });
 
-    await withFakeNetwork([["/me/bookmarks", bookmark(250, "2026-11-01T10:00:00Z")]], async () => {
+    await withFakeNetwork([[BOOKMARK_SEARCH, bookmark(250, "2026-11-01T10:00:00Z")]], async () => {
       expect(
         await getMangaProgress(SOURCE_MANGA, async () => chapters),
         "a chapter not in the list",
@@ -412,7 +411,7 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
 
     await withFakeNetwork(
       [
-        ["/me/bookmarks", { body: { data: [], meta: { total: 0 } } }],
+        [BOOKMARK_SEARCH, { body: { data: [], meta: { total: 0 } } }],
         ["/bookmarks/42", { body: {} }],
       ],
       async (network) => {
@@ -446,7 +445,7 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
 
     await withFakeNetwork(
       [
-        ["/me/bookmarks", { body: { data: [], meta: { total: 0 } } }],
+        [BOOKMARK_SEARCH, { body: { data: [], meta: { total: 0 } } }],
         ["/bookmarks/42", { status: 500 }],
       ],
       async () => {
@@ -463,7 +462,7 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
     session.signOut();
     const form = new AsuraSettingForm();
 
-    await withFakeNetwork([["/auth/login", { status: 422 }]], async () => {
+    await withFakeNetwork([[LOGIN, { status: 422 }]], async () => {
       await form.updateEmail("  reader@example.com ");
       await form.updatePassword("wrong");
       await form.signIn();
@@ -472,12 +471,10 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
     const rows = form.getSections()[0]?.items.map((item) => item.id);
     expect(rows).to.include("signInError");
 
-    await withFakeNetwork([["/auth/login", tokens("a", "r", HOUR)]], async (network) => {
-      await form.updatePassword("secret");
+    await withFakeNetwork([[LOGIN, tokens("a", "r", HOUR)]], async (network) => {
+      await form.updatePassword(PASSWORD);
       await form.signIn();
-      expect(JSON.parse(requestBodyText(network.requests[0]!)).email, "trimmed").to.equal(
-        "reader@example.com",
-      );
+      expect(JSON.parse(requestBodyText(network.requests[0]!)).email, "trimmed").to.equal(EMAIL);
     });
 
     expect(form.getSections()[0]?.id, "now signed in").to.equal("account");

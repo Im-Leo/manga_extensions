@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
+import { SCHEMA_KEYS, SETTING_KEYS } from "./keys";
 import { getKey, setKey } from "./storage";
 
 export const DISCOVER_SECTIONS = {
@@ -25,14 +26,16 @@ export const DEFAULT_SECTION_ORDER = [
 const DISCOVER_SECTION_ORDER_SCHEMA = 2;
 
 export function getDiscoverSectionOrder(): string[] {
-  const savedSchema = Application.getState("discover_section_order_schema") as number | undefined;
+  const savedSchema = Application.getState(SCHEMA_KEYS.discoverSectionOrderSchema) as
+    | number
+    | undefined;
   if (savedSchema !== DISCOVER_SECTION_ORDER_SCHEMA) {
-    Application.setState(undefined, "discover_section_order");
-    Application.setState(DISCOVER_SECTION_ORDER_SCHEMA, "discover_section_order_schema");
+    Application.setState(undefined, SETTING_KEYS.discoverSectionOrder);
+    Application.setState(DISCOVER_SECTION_ORDER_SCHEMA, SCHEMA_KEYS.discoverSectionOrderSchema);
     return DEFAULT_SECTION_ORDER.slice();
   }
 
-  const rawOrder = Application.getState("discover_section_order") as string[] | undefined;
+  const rawOrder = Application.getState(SETTING_KEYS.discoverSectionOrder) as string[] | undefined;
   if (!rawOrder || !Array.isArray(rawOrder)) {
     return DEFAULT_SECTION_ORDER.slice();
   }
@@ -52,28 +55,35 @@ export function getDiscoverSectionOrder(): string[] {
 
   const changed = result.length !== rawOrder.length || result.some((id, i) => id !== rawOrder[i]);
   if (changed) {
-    Application.setState(result, "discover_section_order");
+    Application.setState(result, SETTING_KEYS.discoverSectionOrder);
   }
   return result;
 }
 
 export function setDiscoverSectionOrder(order: string[]): void {
-  Application.setState(order, "discover_section_order");
-  Application.setState(DISCOVER_SECTION_ORDER_SCHEMA, "discover_section_order_schema");
+  Application.setState(order, SETTING_KEYS.discoverSectionOrder);
+  Application.setState(DISCOVER_SECTION_ORDER_SCHEMA, SCHEMA_KEYS.discoverSectionOrderSchema);
 }
 
-export const getPopularEnabled = (): boolean => getKey("popular_enabled", true);
-export const setPopularEnabled = (v: boolean): void => setKey("popular_enabled", v);
-export const getLatestUpdatesEnabled = (): boolean => getKey("latest_updates_enabled", true);
-export const setLatestUpdatesEnabled = (v: boolean): void => setKey("latest_updates_enabled", v);
-export const getRecommendedEnabled = (): boolean => getKey("recommended_enabled", true);
-export const setRecommendedEnabled = (v: boolean): void => setKey("recommended_enabled", v);
-export const getSelfPublishedEnabled = (): boolean => getKey("self_published_enabled", true);
-export const setSelfPublishedEnabled = (v: boolean): void => setKey("self_published_enabled", v);
-export const getSeasonalEnabled = (): boolean => getKey("seasonal_enabled", true);
-export const setSeasonalEnabled = (v: boolean): void => setKey("seasonal_enabled", v);
-export const getRecentlyAddedEnabled = (): boolean => getKey("recently_added_enabled", true);
-export const setRecentlyAddedEnabled = (v: boolean): void => setKey("recently_added_enabled", v);
+export const getPopularEnabled = (): boolean => getKey(SETTING_KEYS.popularEnabled, true);
+export const setPopularEnabled = (v: boolean): void => setKey(SETTING_KEYS.popularEnabled, v);
+export const getLatestUpdatesEnabled = (): boolean =>
+  getKey(SETTING_KEYS.latestUpdatesEnabled, true);
+export const setLatestUpdatesEnabled = (v: boolean): void =>
+  setKey(SETTING_KEYS.latestUpdatesEnabled, v);
+export const getRecommendedEnabled = (): boolean => getKey(SETTING_KEYS.recommendedEnabled, true);
+export const setRecommendedEnabled = (v: boolean): void =>
+  setKey(SETTING_KEYS.recommendedEnabled, v);
+export const getSelfPublishedEnabled = (): boolean =>
+  getKey(SETTING_KEYS.selfPublishedEnabled, true);
+export const setSelfPublishedEnabled = (v: boolean): void =>
+  setKey(SETTING_KEYS.selfPublishedEnabled, v);
+export const getSeasonalEnabled = (): boolean => getKey(SETTING_KEYS.seasonalEnabled, true);
+export const setSeasonalEnabled = (v: boolean): void => setKey(SETTING_KEYS.seasonalEnabled, v);
+export const getRecentlyAddedEnabled = (): boolean =>
+  getKey(SETTING_KEYS.recentlyAddedEnabled, true);
+export const setRecentlyAddedEnabled = (v: boolean): void =>
+  setKey(SETTING_KEYS.recentlyAddedEnabled, v);
 
 export interface DiscoverSectionDefinition {
   id: string;

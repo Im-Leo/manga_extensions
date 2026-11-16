@@ -5,6 +5,7 @@ import { ContentRating, type SourceManga, type TestLogger } from "@paperback/typ
 import { expect } from "chai";
 
 import { FlameComics } from "../FlameComics/main.js";
+import { CDN } from "../FlameComics/models.js";
 import {
   enrichLatestWithBrowseData,
   isNovel,
@@ -23,7 +24,6 @@ import {
   assertSearchResultItem,
   imagePagesOf,
   assertSourceManga,
-  assertUniqueInterceptorIds,
 } from "./contracts.js";
 import {
   CHAPTER_READER,
@@ -37,8 +37,7 @@ import {
   makeSeries,
 } from "./fixtures/flamecomics.js";
 import { registerFlameNetworkTests } from "./flamecomics-network.js";
-import { liveTestsEnabled } from "./live-tests.js";
-import { TestSuite, registerDefaultTests } from "./suite.js";
+import { TestSuite, registerSourceTests } from "./suite.js";
 
 const SOURCE_MANGA = {
   mangaId: "1",
@@ -54,10 +53,6 @@ function rate(series: Parameters<typeof toSortableList>[0][number]) {
 }
 
 function registerOfflineTests(suite: TestSuite): void {
-  suite.test("interceptor ids are unique", async () => {
-    assertUniqueInterceptorIds(FlameComics, "FlameComics");
-  });
-
   suite.test("isNovel: detects novels by id and by type", async () => {
     expect(isNovel(NOVEL_BY_ID), "novel_id marks a novel").to.equal(true);
     expect(isNovel(NOVEL_BY_TYPE), '"Web Novel" type marks a novel').to.equal(true);
@@ -100,9 +95,7 @@ function registerOfflineTests(suite: TestSuite): void {
     const item = toSearchResultItem(sortable!, LATEST_SORT);
 
     assertSearchResultItem(item, "search result");
-    expect(item.imageUrl).to.equal(
-      "https://cdn.flamecomics.xyz/uploads/images/series/1/cover.webp?1700000000",
-    );
+    expect(item.imageUrl).to.equal(`${CDN}/uploads/images/series/1/cover.webp?1700000000`);
   });
 
   suite.test("content rating: derived per title, from categories or tags", async () => {
@@ -184,11 +177,7 @@ export async function runTests(logger: TestLogger) {
   registerOfflineTests(suite);
   registerFlameNetworkTests(suite);
 
-  if (liveTestsEnabled()) {
-    registerDefaultTests(suite, FlameComics, sourceInfo);
-  } else {
-    suite.skip("live end-to-end", "set PB_LIVE=1 to run network tests");
-  }
+  registerSourceTests(suite, FlameComics, sourceInfo);
 
   await suite.run();
 }

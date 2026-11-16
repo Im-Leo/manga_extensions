@@ -24,7 +24,9 @@ import {
   assertChapterDetails,
   assertSearchResultItem,
   assertSourceManga,
+  assertUniqueInterceptorIds,
 } from "./contracts.js";
+import { liveTestsEnabled } from "./live-tests.js";
 
 export type TestCase = {
   name: string;
@@ -335,3 +337,25 @@ export const registerDefaultChapterProvidingSourceTests = function (
     });
   }
 };
+
+/**
+ * What every source suite registers: its interceptor ids, and the end-to-end
+ * pass when live tests are on (a recorded skip otherwise, so it cannot read as
+ * a pass).
+ */
+export function registerSourceTests(
+  suite: TestSuite,
+  extension: Extension,
+  extensionInfo: ExtensionInfo,
+  testData: ExtensionTestData = {},
+): void {
+  suite.test("interceptor ids are unique", async () => {
+    assertUniqueInterceptorIds(extension, extensionInfo.name);
+  });
+
+  if (liveTestsEnabled()) {
+    registerDefaultTests(suite, extension, extensionInfo, testData);
+  } else {
+    suite.skip("live end-to-end", "set PB_LIVE=1 to run network tests");
+  }
+}
