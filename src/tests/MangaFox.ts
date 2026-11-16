@@ -10,7 +10,7 @@ import {
 import { expect } from "chai";
 import * as cheerio from "cheerio";
 
-import { MangaFox } from "../MangaFox/main.js";
+import { MangaFox, MangaFoxExtension } from "../MangaFox/main.js";
 import type { SearchMetadata } from "../MangaFox/models.js";
 import {
   LAYOUT_COMPACT,
@@ -28,6 +28,7 @@ import {
   assertSourceManga,
   assertUniqueInterceptorIds,
 } from "./contracts.js";
+import { withFakeNetwork } from "./fakes/application.js";
 import {
   CHAPTER_LIST_HTML,
   COMPACT_LISTING_HTML,
@@ -223,10 +224,32 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 }
 
+function registerRequestTests(suite: TestSuite): void {
+  suite.test(
+    "requests: opening a title fetches its page once for details and chapters",
+    async () => {
+      const extension = new MangaFoxExtension();
+      const sourceManga = { mangaId: "safe_title", mangaInfo: { primaryTitle: "Safe Title" } };
+
+      await withFakeNetwork(
+        [["/manga/safe_title", { body: DETAIL_SAFE_HTML }]],
+        async (network) => {
+          const details = await extension.getMangaDetails("safe_title");
+          await extension.getChapters(sourceManga as SourceManga);
+
+          expect(details.mangaInfo.primaryTitle).to.equal("Safe Title");
+          expect(network.count("/manga/safe_title")).to.equal(1);
+        },
+      );
+    },
+  );
+}
+
 export async function runTests(logger: TestLogger) {
   const suite = new TestSuite("MangaFox tests", logger);
 
   registerOfflineTests(suite);
+  registerRequestTests(suite);
 
   if (liveTestsEnabled()) {
     registerDefaultTests(suite, MangaFox, sourceInfo);

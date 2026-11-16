@@ -19,7 +19,9 @@ import {
   type SearchResultItem,
   type SourceManga,
 } from "@paperback/types";
+import type { CheerioAPI } from "cheerio";
 
+import { TtlCache } from "../utils/cache";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor";
 import { fetchCheerio } from "../utils/network";
 import { MangaFoxAdvancedSearchForm } from "./forms/search";
@@ -43,6 +45,9 @@ const SECTION_NEW = "new-manga";
 const SECTION_LATEST = "latest-updates";
 const SECTION_GENRES = "genres";
 
+/** Long enough to span details and chapters loading together, short enough to see new chapters. */
+const DETAIL_PAGE_TTL_MS = 60 * 1000;
+
 export class MangaFoxExtension implements ExtensionImpl<typeof MangaFoxConfig> {
   // Paginated chapters cost one request per page, so this budget sets how fast a
   // chapter opens rather than merely pacing background traffic.
@@ -59,6 +64,12 @@ export class MangaFoxExtension implements ExtensionImpl<typeof MangaFoxConfig> {
   });
 
   private readonly cookieStorage = new CookieStorageInterceptor({ storage: "stateManager" });
+
+  /**
+   * Details and chapters both parse the title page; opening a title asks for both.
+   * Few entries, because a parsed page is large and a library refresh walks many titles.
+   */
+  private readonly detailPages = new TtlCache<string, CheerioAPI>(DETAIL_PAGE_TTL_MS, 4);
 
   async initialise(): Promise<void> {
     this.rateLimiter.registerInterceptor();
@@ -154,13 +165,15 @@ export class MangaFoxExtension implements ExtensionImpl<typeof MangaFoxConfig> {
   }
 
   async getMangaDetails(mangaId: string): Promise<SourceManga> {
-    const $ = await fetchCheerio(mangaUrl(mangaId));
-    return parseMangaDetails($, mangaId);
+    return parseMangaDetails(await this.detailPage(mangaId), mangaId);
   }
 
   async getChapters(sourceManga: SourceManga): Promise<Chapter[]> {
-    const $ = await fetchCheerio(mangaUrl(sourceManga.mangaId));
-    return parseChapters($, sourceManga);
+    return parseChapters(await this.detailPage(sourceManga.mangaId), sourceManga);
+  }
+
+  private detailPage(mangaId: string): Promise<CheerioAPI> {
+    return this.detailPages.get(mangaId, (id) => fetchCheerio(mangaUrl(id)));
   }
 
   async getChapterDetails(chapter: Chapter): Promise<ChapterDetails> {
