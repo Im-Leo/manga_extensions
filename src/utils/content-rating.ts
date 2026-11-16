@@ -93,8 +93,8 @@ const PERSISTED_RATING_LIMIT = 2000;
 /**
  * Where a persisted cache reads and writes.
  *
- * Injectable because `Application` is a sandbox global the test runner does not
- * expose — passing the store in is what makes persistence testable at all.
+ * Injectable so a test can inspect exactly what is written, and when, without
+ * sharing `Application` state with every other test in the run.
  */
 export interface RatingStore {
   read(key: string): unknown;
@@ -109,8 +109,9 @@ const applicationStore: RatingStore = {
 /**
  * Ratings learned from detail pages, reused by later listings.
  *
- * Scoped per extension, since bundles share no runtime. Unbounded, because a
- * browsing session cannot realistically reach more than a few hundred titles.
+ * Scoped per extension, since bundles share no runtime. Unbounded in memory,
+ * because a browsing session cannot realistically reach more than a few hundred
+ * titles; only the persisted copy is capped.
  */
 export class ContentRatingCache {
   private readonly ratings = new Map<string, ContentRating>();
@@ -130,6 +131,9 @@ export class ContentRatingCache {
   remember(mangaId: string, rating: ContentRating): void {
     if (!mangaId) return;
     this.load();
+    // Re-inserted so a re-learned title moves to the end and is the last to be
+    // dropped by the persisted cap.
+    this.ratings.delete(mangaId);
     this.ratings.set(mangaId, rating);
     this.dirty = true;
   }
@@ -155,7 +159,7 @@ export class ContentRatingCache {
     if (!this.storageKey || !this.dirty) return;
     this.dirty = false;
 
-    // Oldest entries go first; Map preserves insertion order.
+    // Least recently learned go first; Map preserves insertion order.
     const entries = [...this.ratings.entries()].slice(-PERSISTED_RATING_LIMIT);
     this.store.write(this.storageKey, Object.fromEntries(entries));
   }
