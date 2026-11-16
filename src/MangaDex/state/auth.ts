@@ -100,7 +100,7 @@ export function saveAccessToken(
 
 const authRequestCache: Record<string, Promise<AuthResponse>> = {};
 
-async function _authEndpointRequest(payload: string): Promise<AuthResponse> {
+async function postToAuthEndpoint(payload: string): Promise<AuthResponse> {
   const [response, buffer] = await Application.scheduleRequest({
     method: "POST",
     url: MANGADEX_AUTH_TOKEN_URL,
@@ -126,7 +126,7 @@ async function _authEndpointRequest(payload: string): Promise<AuthResponse> {
         `Auth failed: ${json.error}: ${json.error_description || ""} (status code: ${response.status})`,
       );
     }
-    throw new Error(`Request failed with status code: ${response.status}`);
+    throw new Error(`MangaDex: request failed with status ${response.status}`);
   }
 
   if (!json) {
@@ -144,7 +144,7 @@ export function authEndpointRequest(payload: string): Promise<AuthResponse> {
   const inFlight = authRequestCache[payload];
   if (inFlight) return inFlight;
 
-  const request = _authEndpointRequest(payload).finally(() => {
+  const request = postToAuthEndpoint(payload).finally(() => {
     delete authRequestCache[payload];
   });
   authRequestCache[payload] = request;

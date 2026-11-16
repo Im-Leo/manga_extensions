@@ -27,7 +27,7 @@ export class MangaDexInterceptor extends PaperbackInterceptor {
       return request;
     }
 
-    const expSeconds = Number(accessToken.tokenBody.exp);
+    const expSeconds = accessToken.tokenBody.exp;
     const expValid = Number.isFinite(expSeconds) && expSeconds > 1_000_000_000;
     const expired = !expValid || expSeconds <= Date.now() / 1000 + 60;
     if (expired) {
@@ -119,7 +119,7 @@ async function fetchJSONInternal<T>(request: Request, allowAuthRetry: boolean): 
         : `HTTP ${response.status}`;
     throw new Error(`MangaDex API Error: ${summary}`);
   }
-  return json as T;
+  return json;
 }
 
 export function fetchJSON<T>(request: Request): Promise<T> {

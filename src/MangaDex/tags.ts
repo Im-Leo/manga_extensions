@@ -64,7 +64,7 @@ let synthRetryAt = 0;
 let synthBackoffMs = SYNTH_BACKOFF_START_MS;
 
 export function getCachedTags(): TagCache | null {
-  const raw = Application.getState("mangadex_tag_cache") as unknown;
+  const raw = Application.getState("mangadex_tag_cache");
   if (
     !raw ||
     typeof raw !== "object" ||
@@ -89,7 +89,7 @@ export function getCachedTags(): TagCache | null {
       typedTag.group === "" ||
       !typedTag.name ||
       typeof typedTag.name !== "object" ||
-      typeof (typedTag.name as { en?: unknown }).en !== "string" ||
+      typeof typedTag.name.en !== "string" ||
       (typedTag.name as { en?: string }).en === ""
     ) {
       return null;

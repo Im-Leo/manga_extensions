@@ -39,26 +39,35 @@ const DEMOGRAPHIC_ITEMS = DEMOGRAPHICS.map((d) => ({ id: d.enum, title: d.name }
 const STATUS_ITEMS = PUBLICATION_STATUSES.map((s) => ({ id: s.enum, title: s.name }));
 const ORIGINAL_LANGUAGE_ITEMS = ORIGINAL_LANGUAGES.map((l) => ({ id: l.enum, title: l.name }));
 
+/** Every field present, so the form never has to ask whether one was set. */
+type ResolvedSearchMetadata = Required<MangaDexSearchMetadata>;
+
+/** Saved searches predate some fields, and the app may hand back an array for empty metadata. */
+function withDefaults(raw: MangaDexSearchMetadata | undefined): ResolvedSearchMetadata {
+  const meta: MangaDexSearchMetadata = raw && !Array.isArray(raw) ? raw : {};
+  return {
+    ...meta,
+    includeOperator: meta.includeOperator ?? [DEFAULT_INCLUDE_OPERATOR],
+    excludeOperator: meta.excludeOperator ?? [DEFAULT_EXCLUDE_OPERATOR],
+    tagsByGroup: meta.tagsByGroup ?? {},
+    demographics: meta.demographics ?? [],
+    statuses: meta.statuses ?? [],
+    originalLanguages: meta.originalLanguages ?? [],
+    year: meta.year ?? "",
+    hasAvailableChapters: meta.hasAvailableChapters ?? true,
+    authorOrArtist: meta.authorOrArtist ?? "",
+    group: meta.group ?? "",
+  };
+}
+
 /** Tag, rating, language and status filters, all applied by the API. */
 export class MangaDexAdvancedSearchForm extends AdvancedSearchForm {
-  private metadata: MangaDexSearchMetadata;
-  private tagSections: TagSection[];
+  private readonly metadata: ResolvedSearchMetadata;
+  private readonly tagSections: TagSection[];
 
   constructor(searchQuery: SearchQuery<MangaDexSearchMetadata>, tagSections: TagSection[]) {
     super();
-    const raw = searchQuery.metadata;
-    const meta: MangaDexSearchMetadata = raw && !Array.isArray(raw) ? raw : {};
-    meta.includeOperator ??= [DEFAULT_INCLUDE_OPERATOR];
-    meta.excludeOperator ??= [DEFAULT_EXCLUDE_OPERATOR];
-    meta.tagsByGroup ??= {};
-    meta.demographics ??= [];
-    meta.statuses ??= [];
-    meta.originalLanguages ??= [];
-    meta.year ??= "";
-    meta.hasAvailableChapters ??= true;
-    meta.authorOrArtist ??= "";
-    meta.group ??= "";
-    this.metadata = meta;
+    this.metadata = withDefaults(searchQuery.metadata);
     this.tagSections = tagSections;
   }
 
@@ -68,25 +77,25 @@ export class MangaDexAdvancedSearchForm extends AdvancedSearchForm {
 
   override getSections(): FormSectionElement<unknown>[] {
     return [
-      this.operatorSection("includeOperator", "Include Operator", this.metadata.includeOperator!),
-      this.operatorSection("excludeOperator", "Exclude Operator", this.metadata.excludeOperator!),
+      this.operatorSection("includeOperator", "Include Operator", this.metadata.includeOperator),
+      this.operatorSection("excludeOperator", "Exclude Operator", this.metadata.excludeOperator),
       ...this.tagSections.map((tagSection) => this.tagGroupSection(tagSection)),
       this.multiSelectSection(
         "demographics",
         "Publication Demographic",
-        this.metadata.demographics!,
+        this.metadata.demographics,
         DEMOGRAPHIC_ITEMS,
       ),
       this.multiSelectSection(
         "statuses",
         "Publication Status",
-        this.metadata.statuses!,
+        this.metadata.statuses,
         STATUS_ITEMS,
       ),
       this.multiSelectSection(
         "originalLanguages",
         "Original Language",
-        this.metadata.originalLanguages!,
+        this.metadata.originalLanguages,
         ORIGINAL_LANGUAGE_ITEMS,
       ),
       this.inputSection({
@@ -94,7 +103,7 @@ export class MangaDexAdvancedSearchForm extends AdvancedSearchForm {
         header: "Year",
         rowId: "year",
         title: "Year (e.g. 2024)",
-        value: this.metadata.year!,
+        value: this.metadata.year,
         apply: (v) => {
           this.metadata.year = v;
         },
@@ -103,7 +112,7 @@ export class MangaDexAdvancedSearchForm extends AdvancedSearchForm {
         ToggleRow("has_available_chapters", {
           title: "Has Available Chapters",
           subtitle: "Hide titles with zero translated chapters in your languages",
-          value: this.metadata.hasAvailableChapters!,
+          value: this.metadata.hasAvailableChapters,
           onValueChange: closureSelector(this, "has_available_chapters", async (value: boolean) => {
             this.metadata.hasAvailableChapters = value;
           }),
@@ -114,7 +123,7 @@ export class MangaDexAdvancedSearchForm extends AdvancedSearchForm {
         header: "Author or Artist",
         rowId: "author_or_artist",
         title: "Author/Artist UUID",
-        value: this.metadata.authorOrArtist!,
+        value: this.metadata.authorOrArtist,
         apply: (v) => {
           this.metadata.authorOrArtist = v;
         },
@@ -124,7 +133,7 @@ export class MangaDexAdvancedSearchForm extends AdvancedSearchForm {
         header: "Scanlation Group",
         rowId: "group",
         title: "Group UUID",
-        value: this.metadata.group!,
+        value: this.metadata.group,
         apply: (v) => {
           this.metadata.group = v;
         },
@@ -191,7 +200,7 @@ export class MangaDexAdvancedSearchForm extends AdvancedSearchForm {
       TriStateSelectRow(rowId, {
         title: tagSection.title,
         layout: "list",
-        value: this.metadata.tagsByGroup![sectionId] ?? {},
+        value: this.metadata.tagsByGroup[sectionId] ?? {},
         allowExclusion: true,
         allowEmptySelection: true,
         items: (tagSection.tags ?? []).map((tag) => ({ id: tag.id, title: tag.title })),
@@ -199,7 +208,7 @@ export class MangaDexAdvancedSearchForm extends AdvancedSearchForm {
           this,
           rowId,
           async (value: Record<string, "included" | "excluded">) => {
-            this.metadata.tagsByGroup![sectionId] = value;
+            this.metadata.tagsByGroup[sectionId] = value;
           },
         ),
       }),

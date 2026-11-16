@@ -13,7 +13,6 @@ import { isRatingAllowed } from "../MangaDex/chapter-utils.js";
 import { swapItems } from "../MangaDex/forms/reorderable.js";
 import { MangaDex } from "../MangaDex/main.js";
 import { OriginalLanguage, RelationshipType, type Relationship } from "../MangaDex/models.js";
-import {} from "../MangaDex/parsers.js";
 import sourceInfo from "../MangaDex/pbconfig.js";
 import {
   buildCoverImageUrl,

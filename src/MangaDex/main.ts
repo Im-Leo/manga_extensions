@@ -24,16 +24,17 @@ import { runStateMigrations } from "./state";
 import { processTitlesForUpdates } from "./updates";
 
 export class MangaDexExtension implements ExtensionImpl<typeof MangaDexConfig> {
-  globalRateLimiter = new BasicRateLimiter("rateLimiter", {
+  private readonly rateLimiter = new BasicRateLimiter("rateLimiter", {
     numberOfRequests: 5,
     bufferInterval: 1,
     ignoreImages: true,
   });
-  mainRequestInterceptor = new MangaDexInterceptor("main");
+
+  private readonly interceptor = new MangaDexInterceptor("main");
 
   async initialise(): Promise<void> {
-    this.globalRateLimiter.registerInterceptor();
-    this.mainRequestInterceptor.registerInterceptor();
+    this.rateLimiter.registerInterceptor();
+    this.interceptor.registerInterceptor();
     runStateMigrations();
   }
 

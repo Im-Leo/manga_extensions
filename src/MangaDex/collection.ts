@@ -5,7 +5,7 @@ import type { ManagedCollection, ManagedCollectionChangeset, SourceManga } from 
 
 import { resolveMangaId } from "./legacy";
 import { getRatingEnumList } from "./lookups";
-import type { MangaDetailsResponse, MangaStatusResponse, SearchResponse } from "./models";
+import type { MangaStatusResponse, SearchResponse } from "./models";
 import { fetchJSON } from "./network";
 import { parseMangaDetails, readMangaDetailsSettings } from "./parsers";
 import { getAccessToken } from "./state";
@@ -27,27 +27,29 @@ export async function getManagedLibraryCollections(): Promise<ManagedCollection[
   ];
 }
 
+async function postStatus(mangaId: string, status: string | null, action: string): Promise<void> {
+  const resolvedId = await resolveMangaId(mangaId);
+  try {
+    await fetchJSON<{ result?: string }>({
+      url: buildMangaStatusWriteUrl(resolvedId).toString(),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e);
+    throw new Error(`MangaDex collection ${action} failed for ${resolvedId}: ${detail}`, {
+      cause: e,
+    });
+  }
+}
+
 export async function commitManagedCollectionChanges(
   changeset: ManagedCollectionChangeset,
 ): Promise<void> {
   if (!getAccessToken()) {
     throw new Error("You need to be logged in");
   }
-
-  const postStatus = async (mangaId: string, status: string | null, action: string) => {
-    const resolvedId = await resolveMangaId(mangaId);
-    try {
-      await fetchJSON<{ result?: string }>({
-        url: buildMangaStatusWriteUrl(resolvedId).toString(),
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-    } catch (e) {
-      const detail = e instanceof Error ? e.message : String(e);
-      throw new Error(`MangaDex collection ${action} failed for ${resolvedId}: ${detail}`);
-    }
-  };
 
   const additionRequests = (changeset.additions ?? []).map((a) =>
     postStatus(a.mangaId, changeset.collection.id, "add"),
@@ -103,7 +105,7 @@ export async function getSourceMangaInManagedCollection(
     return json.data.map((item) =>
       parseMangaDetails(
         item.id,
-        { result: "ok", response: "entity", data: item } as MangaDetailsResponse,
+        { result: "ok", response: "entity", data: item },
         undefined,
         detailsSettings,
       ),
