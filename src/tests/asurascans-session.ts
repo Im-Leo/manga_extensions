@@ -8,7 +8,7 @@ import { TrackingForm } from "../AsuraScans/forms/progress.js";
 import { AsuraSettingForm } from "../AsuraScans/forms/settings.js";
 import { AsuraScans } from "../AsuraScans/main.js";
 import * as session from "../AsuraScans/session.js";
-import { processChapterReadActionQueue } from "../AsuraScans/tracking.js";
+import { getMangaProgress, processChapterReadActionQueue } from "../AsuraScans/tracking.js";
 import { bookmarkSearchUrl } from "../AsuraScans/urls.js";
 import { HttpError } from "../utils/network.js";
 import { rejectionOf } from "./async.js";
@@ -60,6 +60,26 @@ function chapter(early: boolean): Chapter {
 const PAGES = {
   body: { data: { chapter: { pages: [{ url: "https://cdn.example.com/1.webp" }] } } },
 };
+
+async function noChapters(): Promise<Chapter[]> {
+  return [];
+}
+
+/** A bookmark search answering with this title's bookmark. */
+function bookmark(lastRead: number, lastReadAt: string): FakeRoute {
+  return {
+    body: {
+      data: [
+        {
+          last_read_chapter: lastRead,
+          last_read_at: lastReadAt,
+          series: { slug: SOURCE_MANGA.mangaId },
+        },
+      ],
+      meta: { total: 1 },
+    },
+  };
+}
 
 /** Lets a form's fire-and-forget load settle; the runner's vm context has no timers. */
 async function settle(): Promise<void> {
@@ -296,6 +316,59 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
       );
     },
   );
+
+  suite.test("getMangaProgress: no progress resolves to undefined, never a rejection", async () => {
+    // Paperback calls this whenever a tracked title opens; a rejection crashes the app.
+    session.signOut();
+    await withFakeNetwork([], async (network) => {
+      expect(await getMangaProgress(SOURCE_MANGA, noChapters), "signed out").to.equal(undefined);
+      expect(network.requests).to.have.lengthOf(0);
+    });
+
+    await signInWith(HOUR);
+    await withFakeNetwork(
+      [["/me/bookmarks", { body: { data: [], meta: { total: 0 } } }]],
+      async () => {
+        expect(await getMangaProgress(SOURCE_MANGA, noChapters), "not bookmarked").to.equal(
+          undefined,
+        );
+      },
+    );
+
+    await withFakeNetwork([["/me/bookmarks", { status: 500 }]], async () => {
+      expect(await getMangaProgress(SOURCE_MANGA, noChapters), "lookup failed").to.equal(undefined);
+    });
+  });
+
+  suite.test("getMangaProgress: the last-read chapter is the title's real chapter", async () => {
+    session.signOut();
+    await signInWith(HOUR);
+
+    const chapters = [110, 111].map(
+      (chapNum) => ({ chapterId: `90${chapNum}`, chapNum, sourceManga: SOURCE_MANGA }) as Chapter,
+    );
+
+    await withFakeNetwork([["/me/bookmarks", bookmark(111, "2026-11-01T10:00:00Z")]], async () => {
+      const progress = await getMangaProgress(SOURCE_MANGA, async () => chapters);
+
+      expect(progress?.lastReadChapter.chapterId, "the API's chapter id, not the number").to.equal(
+        "90111",
+      );
+      expect(progress?.lastReadTime?.toISOString()).to.equal("2026-11-01T10:00:00.000Z");
+    });
+
+    await withFakeNetwork([["/me/bookmarks", bookmark(111, "not a date")]], async () => {
+      const progress = await getMangaProgress(SOURCE_MANGA, async () => chapters);
+      expect(progress?.lastReadTime, "an invalid date is omitted").to.equal(undefined);
+    });
+
+    await withFakeNetwork([["/me/bookmarks", bookmark(250, "2026-11-01T10:00:00Z")]], async () => {
+      expect(
+        await getMangaProgress(SOURCE_MANGA, async () => chapters),
+        "a chapter not in the list",
+      ).to.equal(undefined);
+    });
+  });
 
   suite.test("processChapterReadActionQueue: signed out, the queue is left intact", async () => {
     session.signOut();
