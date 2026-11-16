@@ -27,7 +27,7 @@ import { SiteInterceptor } from "../utils/interceptor";
 import { fetchJSON } from "../utils/network";
 import { TrackingForm } from "./forms/progress";
 import { AsuraScansAdvancedSearchForm } from "./forms/search";
-import { AsuraSettingForm, getShowUpcomingChapters } from "./forms/settings";
+import { AsuraSettingForm } from "./forms/settings";
 import {
   AS_DOMAIN,
   READER_PAGE_TOKEN,
@@ -236,7 +236,7 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
   async getChapters(sourceManga: SourceManga): Promise<Chapter[]> {
     const response = await fetchJSON<AsuraChapterResponse>(chapterListUrl(sourceManga.mangaId));
 
-    return parseChapters(response, sourceManga, getShowUpcomingChapters());
+    return parseChapters(response, sourceManga);
   }
 
   async getChapterDetails(chapter: Chapter): Promise<ChapterDetails> {

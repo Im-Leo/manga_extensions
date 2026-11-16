@@ -7,23 +7,12 @@ import {
   InputRow,
   LabelRow,
   Section,
-  ToggleRow,
   type FormSectionElement,
 } from "@paperback/types";
 
 import type { AsuraUser } from "../models";
 import * as session from "../session";
 import { clearCachedTags } from "../tags";
-
-const SHOW_UPCOMING_KEY = "prerelease";
-
-export function getShowUpcomingChapters(): boolean {
-  return Application.getState(SHOW_UPCOMING_KEY) === "true";
-}
-
-function setShowUpcomingChapters(value: boolean): void {
-  Application.setState(value.toString(), SHOW_UPCOMING_KEY);
-}
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -67,7 +56,7 @@ export class AsuraSettingForm extends Form {
       {
         id: "signIn",
         header: "Account",
-        footer: "Signing in unlocks early access chapters and reading progress sync.",
+        footer: "Signing in syncs your reading progress.",
       },
       [
         InputRow("email", {
@@ -94,11 +83,6 @@ export class AsuraSettingForm extends Form {
 
   private preferences(): FormSectionElement<unknown> {
     return Section({ id: "preferences", header: "Preferences" }, [
-      ToggleRow("showUpcoming", {
-        title: "Show Upcoming Chapters",
-        value: getShowUpcomingChapters(),
-        onValueChange: Application.Selector(this as AsuraSettingForm, "updateShowUpcoming"),
-      }),
       ButtonRow("clearTags", {
         title: "Clear Cached Search Tags",
         onSelect: Application.Selector(this as AsuraSettingForm, "clearTags"),
@@ -134,10 +118,6 @@ export class AsuraSettingForm extends Form {
   async signOut(): Promise<void> {
     session.signOut();
     this.reloadForm();
-  }
-
-  async updateShowUpcoming(value: boolean): Promise<void> {
-    setShowUpcomingChapters(value);
   }
 
   async clearTags(): Promise<void> {

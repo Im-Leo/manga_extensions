@@ -75,40 +75,33 @@ export function parseMangaDetails(manga: AsuraManga): SourceManga {
   };
 }
 
-export function parseChapters(
-  response: AsuraChapterResponse,
-  sourceManga: SourceManga,
-  includeUpcoming: boolean,
-): Chapter[] {
+/** Early access (`is_premium`) chapters are locked for readers, so they are not listed. */
+export function parseChapters(response: AsuraChapterResponse, sourceManga: SourceManga): Chapter[] {
+  const now = new Date();
   const chapters: Chapter[] = [];
 
   for (const chapter of response.data) {
-    if (!includeUpcoming && chapter.is_premium) continue;
+    if (chapter.is_premium) continue;
 
     chapters.push({
       sourceManga,
       chapterId: chapter.id.toString(),
-      title: chapter.is_premium ? earlyAccessTitle(chapter.title) : (chapter.title ?? undefined),
+      title: chapter.title ?? undefined,
       langCode: "en",
       chapNum: chapter.number,
       volume: 0,
       sortingIndex: chapter.number,
-      publishDate: releaseDate(chapter, new Date()),
-      additionalInfo: chapter.is_premium ? { early_access: "true" } : undefined,
+      publishDate: releaseDate(chapter, now),
     });
   }
 
   return chapters;
 }
 
-function earlyAccessTitle(title: string | undefined): string {
-  return title ? `${title} (Early Access)` : "Early Access";
-}
-
 /**
- * When the chapter became readable for everyone, or its publication if that is
- * still ahead. Never later than `now`: Paperback crashes when a chapter is dated
- * in the future, and an early access chapter's unlock time always is.
+ * When the chapter became readable for everyone, else its publication. Never
+ * later than `now`: Paperback crashes on opening a title holding a chapter
+ * dated in the future.
  */
 export function releaseDate(chapter: AsuraChapter, now: Date): Date {
   const unlocked = chapter.early_access_until ? new Date(chapter.early_access_until) : undefined;
