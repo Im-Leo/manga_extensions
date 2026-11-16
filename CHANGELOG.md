@@ -26,6 +26,9 @@
   the homepage each time it opens.
 - AsuraScans 1.2.0: the genre and creator lists load in parallel, and the discover sections that
   need them share one load.
+- AsuraScans 1.2.0: early access chapters are no longer listed. The site locks them for readers
+  until they unlock for everyone, and signing in does not change that, so they could only fail to
+  open. The Show Upcoming Chapters setting that listed them is removed.
 - CI: a release branch deploys only after conformance and the offline suite pass on that commit.
   Workflow actions are pinned to commit SHAs, kept current by Dependabot, and jobs that do not
   publish run with read-only access.
@@ -33,14 +36,16 @@
 ### Fixed
 
 - AsuraScans 1.2.0: free chapters failed with "Access token expired" whenever a signed-in session
-  could not be refreshed; only early access chapters now require the account.
+  could not be refreshed. Reading a free chapter no longer depends on the session.
 - AsuraScans 1.2.0: progress set from the tracking form was never saved for a title without a
   bookmark, and opening the form created a bookmark before **Done** was tapped. The form is now
   read-only until **Done**, which creates the bookmark if needed, saves, and shows an error if the
   save fails.
 - AsuraScans 1.2.0: with Show Upcoming Chapters on, opening a title that had an early access
   chapter crashed the app, because that chapter was dated at its future unlock time. Chapters are
-  now never dated in the future, and early access is shown in the chapter title.
+  now never dated in the future.
+- AsuraScans 1.2.0: opening a locked chapter failed with "undefined is not an object". A locked
+  chapter still stored by the app now reports when it unlocks for everyone.
 - AsuraScans 1.2.0: opening a title while signed in could crash the app. Reading progress was
   reported by throwing for a title that is not bookmarked, and by naming a chapter that does not
   exist for one that is. Missing progress now reports as none, and the last-read chapter is the

@@ -3,13 +3,13 @@
 Five manga sources for [Paperback](https://paperback.moe) 0.9, published as a single extension
 repository.
 
-| Extension    | Site            | Notes                                                   |
-| ------------ | --------------- | ------------------------------------------------------- |
-| AsuraScans   | asurascans.com  | Optional sign-in for early access chapters and progress |
-| FlameComics  | flamecomics.xyz | Manga and manhwa only; novels are not listed            |
-| MangaDex     | mangadex.org    | Settings, collections and library sync                  |
-| MangaFox     | fanfox.net      |                                                         |
-| MangaKakalot | mangakakalot.gg | Protected by Cloudflare; may ask you to pass a check    |
+| Extension    | Site            | Notes                                                |
+| ------------ | --------------- | ---------------------------------------------------- |
+| AsuraScans   | asurascans.com  | Optional sign-in syncs reading progress              |
+| FlameComics  | flamecomics.xyz | Manga and manhwa only; novels are not listed         |
+| MangaDex     | mangadex.org    | Settings, collections and library sync               |
+| MangaFox     | fanfox.net      |                                                      |
+| MangaKakalot | mangakakalot.gg | Protected by Cloudflare; may ask you to pass a check |
 
 The sources I read broke often (titles vanishing, blank covers, failing searches) and the
 extensions I relied on were not updated fast enough to keep up, so I wrote these from scratch on
@@ -28,8 +28,9 @@ https://im-leo.github.io/manga_extensions/0.9/stable
 
 ### AsuraScans account
 
-Signing in is optional. Free chapters, search and discover work without it; early access chapters
-and reading-progress sync need it.
+Signing in is optional and only syncs your reading progress; everything else works without it.
+Early access chapters are not listed, because the site locks them until they unlock for everyone,
+whether or not you are signed in.
 
 1. Open the AsuraScans source settings.
 2. Enter your email and password and tap **Sign In**. A wrong password is reported in the form.
