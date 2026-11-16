@@ -67,4 +67,6 @@
   instead of JSON) showed the title as having no chapters. It now reports the failure, so the app
   offers a retry.
 - MangaFox 1.2.0: a page answering with an HTTP error status was parsed as if it were content,
-  which surfaced as blank fields. It now fails with the status and the endpoint.
+  which surfaced as blank fields. It now fails with the status and the endpoint. A title the site
+  has removed, which used to update silently with no new chapters, now says it is no longer on
+  fanfox.net and should be migrated.
