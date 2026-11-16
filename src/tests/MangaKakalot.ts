@@ -10,7 +10,7 @@ import {
 import { expect } from "chai";
 import * as cheerio from "cheerio";
 
-import { MangaKakalot } from "../MangaKakalot/main.js";
+import { MangaKakalot, MangaKakalotExtension } from "../MangaKakalot/main.js";
 import {
   isLastPage,
   parseChapterDetails,
@@ -22,6 +22,7 @@ import {
 } from "../MangaKakalot/parsers.js";
 import sourceInfo from "../MangaKakalot/pbconfig.js";
 import { UNRATED_LISTING_DEFAULT } from "../utils/content-rating.js";
+import { rejectionOf } from "./async.js";
 import {
   assertDiscoverSectionItem,
   assertSearchResultItem,
@@ -30,6 +31,7 @@ import {
   imagePagesOf,
   isMangaTile,
 } from "./contracts.js";
+import { withFakeNetwork } from "./fakes/application.js";
 import {
   CHAPTER_LIST_FAILED_JSON,
   CHAPTER_LIST_JSON,
@@ -253,10 +255,33 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 }
 
+function registerRequestTests(suite: TestSuite): void {
+  suite.test("requests: the search form reads the genre list once", async () => {
+    const extension = new MangaKakalotExtension();
+
+    await withFakeNetwork([[/mangakakalot\.gg$/, { body: GENRES_HTML }]], async (network) => {
+      await extension.getAdvancedSearchForm({ title: "" });
+      await extension.getAdvancedSearchForm({ title: "" });
+
+      expect(network.requests).to.have.lengthOf(1);
+    });
+  });
+
+  suite.test("requests: a non-JSON chapter list fails instead of emptying", async () => {
+    await withFakeNetwork(
+      [["/chapters", { body: "<!DOCTYPE html><title>Just a moment...</title>" }]],
+      async () => {
+        await rejectionOf(MangaKakalot.getChapters(SOURCE_MANGA));
+      },
+    );
+  });
+}
+
 export async function runTests(logger: TestLogger) {
   const suite = new TestSuite("MangaKakalot tests", logger);
 
   registerOfflineTests(suite);
+  registerRequestTests(suite);
 
   registerSharedUtilTests(suite);
   registerSharedNetworkTests(suite);

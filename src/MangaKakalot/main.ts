@@ -18,8 +18,10 @@ import {
   type SearchQuery,
   type SearchResultItem,
   type SourceManga,
+  type TagSection,
 } from "@paperback/types";
 
+import { TtlCache } from "../utils/cache";
 import { learnMissingRatings } from "../utils/content-rating";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor";
 import { fetchCheerio, fetchJSON } from "../utils/network";
@@ -48,6 +50,9 @@ import type MangaKakalotConfig from "./pbconfig";
 /** The chapter API is unpaginated in practice; one oversized page fetches all. */
 const CHAPTER_PAGE_SIZE = 9000;
 
+/** The genre list changes rarely; reading it costs the whole homepage. */
+const GENRES_TTL_MS = 6 * 60 * 60 * 1000;
+
 export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotConfig> {
   private readonly rateLimiter = new BasicRateLimiter("ratelimiter", {
     // Kept below what the site tolerates: this is the one Cloudflare-protected
@@ -67,6 +72,8 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
 
   /** Persists `cf_clearance` so a solved challenge survives an app restart. */
   private readonly cookieStorage = new CookieStorageInterceptor({ storage: "stateManager" });
+
+  private readonly genres = new TtlCache<string, TagSection>(GENRES_TTL_MS, 1);
 
   async initialise(): Promise<void> {
     this.rateLimiter.registerInterceptor();
@@ -103,8 +110,11 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
   }
 
   async getAdvancedSearchForm(query: SearchQuery<SearchMetadata>): Promise<AdvancedSearchForm> {
-    const genres = parseGenres(await fetchCheerio(DOMAIN));
-    genres.tags.sort((a, b) => a.title.localeCompare(b.title));
+    const genres = await this.genres.get("genres", async () => {
+      const section = parseGenres(await fetchCheerio(DOMAIN));
+      section.tags.sort((a, b) => a.title.localeCompare(b.title));
+      return section;
+    });
 
     return new MangaKakalotAdvancedSearchForm(query, genres);
   }
