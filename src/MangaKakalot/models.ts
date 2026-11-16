@@ -3,7 +3,7 @@
 
 import { DiscoverSectionType } from "@paperback/types";
 
-export const DOMAIN = "https://www.mangakakalot.gg";
+export const DOMAIN = "https://www.kakamanga.com";
 
 export const LANGUAGE = "en";
 

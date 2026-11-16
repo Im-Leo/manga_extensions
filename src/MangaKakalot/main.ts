@@ -64,7 +64,6 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
 
   private readonly interceptor = new SiteInterceptor("main", {
     domain: DOMAIN,
-    bypassPage: `${DOMAIN}/manga`,
     // A stale or bad path answers 404 with a page that still parses, so a non-200
     // has to fail loudly rather than yield blank fields.
     requireOk: true,

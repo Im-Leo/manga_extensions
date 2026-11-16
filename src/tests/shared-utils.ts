@@ -265,23 +265,26 @@ export function registerSharedUtilTests(suite: TestSuite): void {
     });
   });
 
-  suite.test("interceptResponse: a Cloudflare challenge raises CloudflareError", async () => {
-    const interceptor = new SiteInterceptor("test", {
-      domain: "https://example.com",
-      bypassPage: "https://example.com/manga",
-    });
+  suite.test(
+    "interceptResponse: a Cloudflare challenge is resolved on the challenged URL",
+    async () => {
+      const interceptor = new SiteInterceptor("test", { domain: "https://example.com" });
 
-    const raised = await rejectionOf(
-      interceptor.interceptResponse(
-        { url: "https://example.com/x", method: "GET" },
-        // Mixed case: header names are case-insensitive and servers vary.
-        response(403, { "CF-Mitigated": "challenge" }),
-        EMPTY_BODY,
-      ),
-    );
+      const raised = await rejectionOf(
+        interceptor.interceptResponse(
+          { url: "https://example.com/search/story/solo", method: "GET" },
+          // Mixed case: header names are case-insensitive and servers vary.
+          response(403, { "CF-Mitigated": "challenge" }),
+          EMPTY_BODY,
+        ),
+      );
 
-    expect(raised, "a challenge must not be returned as data").to.be.instanceOf(CloudflareError);
-  });
+      expect(raised, "a challenge must not be returned as data").to.be.instanceOf(CloudflareError);
+      expect((raised as CloudflareError).resolutionRequest.url).to.equal(
+        "https://example.com/search/story/solo",
+      );
+    },
+  );
 
   suite.test("interceptResponse: requireOk decides whether a non-200 throws", async () => {
     const lenient = new SiteInterceptor("test", { domain: "https://example.com" });

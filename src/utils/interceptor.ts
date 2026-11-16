@@ -39,11 +39,8 @@ async function userAgent(): Promise<string> {
 }
 
 export interface SiteInterceptorOptions {
-  /** Sets the `Referer` header, and the challenge target unless overridden. */
+  /** Sets the `Referer` header. */
   domain: string;
-
-  /** Page to load to solve a challenge, where the domain root will not do. */
-  bypassPage?: string;
 
   /**
    * Reject unsuccessful responses. Needed by sites answering a bad path with an
@@ -97,9 +94,11 @@ export class SiteInterceptor extends PaperbackInterceptor {
     if (headerValue(response.headers, "cf-mitigated") === "challenge") {
       const domain = this.options.domain;
 
+      // The challenged URL itself: Cloudflare guards some paths and not others, so
+      // any fixed page risks loading without a challenge to solve.
       throw new CloudflareError(
         {
-          url: this.options.bypassPage ?? domain,
+          url: request.url,
           method: "GET",
           headers: {
             referer: `${domain}/`,
