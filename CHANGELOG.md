@@ -38,6 +38,10 @@
   bookmark, and opening the form created a bookmark before **Done** was tapped. The form is now
   read-only until **Done**, which creates the bookmark if needed, saves, and shows an error if the
   save fails.
+- AsuraScans 1.2.0: opening a title while signed in could crash the app. Reading progress was
+  reported by throwing for a title that is not bookmarked, and by naming a chapter that does not
+  exist for one that is. Missing progress now reports as none, and the last-read chapter is the
+  title's real chapter.
 - AsuraScans 1.2.0: bookmark lookups broke for titles containing `&`, `#` or `?`, which were sent
   unencoded.
 - AsuraScans 1.2.0: cached search tags never expired, so genres and creators added on the site

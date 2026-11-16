@@ -2,6 +2,7 @@
 /* Copyright © 2026 Im-Leo */
 
 import type {
+  Chapter,
   ChapterReadActionQueueProcessingResult,
   MangaProgress,
   SourceManga,
@@ -66,22 +67,43 @@ export async function updateBookmark(seriesId: string, progress: BookmarkProgres
   await send(bookmarkUrl(seriesId), "PUT", progress);
 }
 
-export async function getMangaProgress(sourceManga: SourceManga): Promise<MangaProgress> {
-  const bookmark = await findBookmark(sourceManga);
-  if (!bookmark) throw new Error("AsuraScans: this title is not in your bookmarks.");
+/**
+ * The title's reading progress, or undefined when there is none to report.
+ *
+ * Paperback calls this whenever a tracked title opens and expects `undefined`
+ * for "no progress": a rejection here takes the app down. Signed out, not
+ * bookmarked, nothing read, and a failed lookup therefore all resolve to
+ * undefined.
+ *
+ * The last-read chapter must be one of the title's real chapters. The bookmark
+ * stores only a chapter number, while chapter ids are the API's own, so the
+ * number is resolved against the chapter list.
+ */
+export async function getMangaProgress(
+  sourceManga: SourceManga,
+  loadChapters: (sourceManga: SourceManga) => Promise<Chapter[]>,
+): Promise<MangaProgress | undefined> {
+  if (!isSignedIn()) return undefined;
 
-  return {
-    sourceManga,
-    lastReadChapter: {
-      chapterId: bookmark.last_read_chapter.toString(),
+  try {
+    const bookmark = await findBookmark(sourceManga);
+    if (!bookmark?.last_read_chapter) return undefined;
+
+    const chapters = await loadChapters(sourceManga);
+    const lastReadChapter = chapters.find(
+      (chapter) => chapter.chapNum === bookmark.last_read_chapter,
+    );
+    if (!lastReadChapter) return undefined;
+
+    const lastReadTime = new Date(bookmark.last_read_at);
+    return {
       sourceManga,
-      volume: 0,
-      langCode: "en",
-      chapNum: bookmark.last_read_chapter,
-    },
-    lastReadTime: new Date(bookmark.last_read_at),
-    userRating: 0,
-  };
+      lastReadChapter,
+      lastReadTime: Number.isNaN(lastReadTime.getTime()) ? undefined : lastReadTime,
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 /**

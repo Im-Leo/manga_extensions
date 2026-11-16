@@ -261,8 +261,8 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
     return new TrackingForm(sourceManga);
   }
 
-  async getMangaProgress(sourceManga: SourceManga): Promise<MangaProgress> {
-    return getMangaProgress(sourceManga);
+  async getMangaProgress(sourceManga: SourceManga): Promise<MangaProgress | undefined> {
+    return getMangaProgress(sourceManga, (manga) => this.getChapters(manga));
   }
 
   async processChapterReadActionQueue(
