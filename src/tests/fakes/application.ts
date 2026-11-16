@@ -83,3 +83,12 @@ export async function withFakeNetwork<T>(
     Object.assign(Application, { scheduleRequest: original });
   }
 }
+
+/** The request body as the server would read it. */
+export function requestBodyText(request: Request): string {
+  const { body } = request;
+  if (body === undefined) return "";
+  if (typeof body === "string") return body;
+  if (body instanceof ArrayBuffer) return new TextDecoder().decode(body);
+  return JSON.stringify(body);
+}

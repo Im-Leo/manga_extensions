@@ -34,6 +34,24 @@ export const chapterListUrl = (mangaId: string): string =>
 export const chapterUrl = (mangaId: string, chapNum: number): string =>
   api().addPath("series").addPath(mangaId).addPath("chapters").addPath(chapNum.toString()).build();
 
+export const authUrl = (action: "login" | "refresh"): string =>
+  api().addPath("auth").addPath(action).build();
+
+/** Bookmarks are searchable only by title; free text is encoded here, as the builder does not. */
+export const bookmarkSearchUrl = (title: string): string =>
+  api().addPath("me").addPath("bookmarks").addQuery("search", encodeURIComponent(title)).build();
+
+export const bookmarkUrl = (seriesId: string): string =>
+  api().addPath("bookmarks").addPath(seriesId).build();
+
+export const bookmarkReadUrl = (seriesId: string, chapterNum: number): string =>
+  api()
+    .addPath("bookmarks")
+    .addPath(seriesId)
+    .addPath("read")
+    .addPath(chapterNum.toString())
+    .build();
+
 /** A discover listing is a search with nothing filtered. */
 export const listingUrl = (sort: string, offset: number, limit: number): string =>
   api()

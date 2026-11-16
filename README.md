@@ -30,6 +30,17 @@ Add the published repository URL in Paperback under **Settings → Extension Rep
 install the sources you want. To run a local build on a device instead, see
 [Development](#development).
 
+### AsuraScans account
+
+Signing in is optional. Free chapters, search and discover work without it; early access chapters
+and reading-progress sync need it. Open the source's settings, enter your email and password, and
+tap **Sign In**. A wrong password is reported in the form. Only the session tokens are kept, in
+Paperback's secure storage; the password is sent once and never stored. **Sign Out** in the same
+place ends the session.
+
+Progress for a title is edited from its tracking form and is written only when you tap **Done**, so
+opening the form and cancelling leaves your bookmarks untouched.
+
 ### Covers not showing?
 
 **After reinstalling an extension, restart the app.** Reinstalling while Paperback
@@ -99,7 +110,8 @@ only where a source needs its own request helpers; MangaFox and MangaKakalot del
 `utils/network` instead, so a local file would be an empty pass-through.
 
 A source may add modules beyond those core names when it has responsibilities the others do not.
-AsuraScans keeps `tracking.ts` for progress sync; distinct from `forms/progress.ts`, which is only
+AsuraScans keeps `session.ts` for the account (secure-state tokens, refresh near expiry and never
+twice at once) and `tracking.ts` for progress sync; distinct from `forms/progress.ts`, which is only
 that feature's UI and a `urls.ts` holding one named builder per endpoint. Both `urls.ts` files
 exist for the same reason: a URL built inline inside an `async` method can only be checked by making
 the request, whereas a named builder is a pure function with offline tests behind it.

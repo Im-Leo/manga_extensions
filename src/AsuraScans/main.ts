@@ -24,9 +24,10 @@ import {
 
 import { rateContent } from "../utils/content-rating";
 import { SiteInterceptor } from "../utils/interceptor";
+import { fetchJSON } from "../utils/network";
 import { TrackingForm } from "./forms/progress";
 import { AsuraScansAdvancedSearchForm } from "./forms/search";
-import { AsuraSettingForm, getAccessToken, getShowUpcomingChapters } from "./forms/settings";
+import { AsuraSettingForm, getShowUpcomingChapters } from "./forms/settings";
 import {
   AS_DOMAIN,
   TagSectionId,
@@ -52,6 +53,7 @@ import {
 } from "./parsers";
 import type AsuraConfig from "./pbconfig";
 import { descramblePage } from "./reader";
+import { getAccessToken, migrateLegacySession, requireAccessToken } from "./session";
 import { getMangaProgress, processChapterReadActionQueue } from "./tracking";
 import {
   chapterListUrl,
@@ -82,6 +84,7 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
   async initialise(): Promise<void> {
     this.rateLimiter.registerInterceptor();
     this.interceptor.registerInterceptor();
+    migrateLegacySession();
   }
 
   async getSettingsForm(): Promise<Form> {
@@ -116,7 +119,7 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
     const page = metadata?.page ?? 0;
 
     if (section.type === DiscoverSectionType.featured) {
-      const trending = await this.requestJSON<AsuraSearchResult>(trendingUrl());
+      const trending = await fetchJSON<AsuraSearchResult>(trendingUrl());
 
       return {
         items: trending.data.map((manga) => ({
@@ -130,7 +133,7 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
     }
 
     const sort = section.type === DiscoverSectionType.chapterUpdates ? "latest" : "popular";
-    const listing = await this.requestJSON<AsuraSearchResult>(
+    const listing = await fetchJSON<AsuraSearchResult>(
       listingUrl(sort, page * (metadata?.per_page ?? PAGE_SIZE), PAGE_SIZE),
     );
 
@@ -164,8 +167,8 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
     const cached = Application.getState("tags") as TagSection[] | undefined;
     if (cached) return cached;
 
-    const genres = await this.requestJSON<{ data: AsuraGenre[] }>(genresUrl());
-    const creators = await this.requestJSON<{ data: AsuraCreatorRequest }>(creatorsUrl());
+    const genres = await fetchJSON<{ data: AsuraGenre[] }>(genresUrl());
+    const creators = await fetchJSON<{ data: AsuraCreatorRequest }>(creatorsUrl());
 
     const sections: TagSection[] = [
       {
@@ -210,7 +213,7 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
     sortingOption: SortingOption | undefined,
   ): Promise<PagedResults<SearchResultItem>> {
     const page = metadata?.page ?? 0;
-    const listing = await this.requestJSON<AsuraSearchResult>(
+    const listing = await fetchJSON<AsuraSearchResult>(
       searchUrl(query, sortingOption, page * (metadata?.per_page ?? PAGE_SIZE), PAGE_SIZE),
     );
 
@@ -223,39 +226,28 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
   }
 
   async getMangaDetails(mangaId: string): Promise<SourceManga> {
-    const body = await this.requestJSON<AsuraSeriesResponse>(seriesUrl(mangaId));
+    const body = await fetchJSON<AsuraSeriesResponse>(seriesUrl(mangaId));
 
     return parseMangaDetails(unwrapSeries(body));
   }
 
   async getChapters(sourceManga: SourceManga): Promise<Chapter[]> {
-    const response = await this.requestJSON<AsuraChapterResponse>(
-      chapterListUrl(sourceManga.mangaId),
-    );
+    const response = await fetchJSON<AsuraChapterResponse>(chapterListUrl(sourceManga.mangaId));
 
     return parseChapters(response, sourceManga, getShowUpcomingChapters());
   }
 
   async getChapterDetails(chapter: Chapter): Promise<ChapterDetails> {
-    const accessToken = (await getAccessToken()) ?? "";
-    if (chapter.additionalInfo?.["early_access"] && !accessToken) {
-      throw new Error(
-        `Chapter is early access. Sign in at ${AS_DOMAIN} to read early access chapters.`,
-      );
-    }
+    const accessToken = await this.readerToken(chapter);
 
-    const [, buffer] = await Application.scheduleRequest({
+    const payload = await fetchJSON<{ data: { chapter: { pages: PageData[] } } }>({
       url: chapterUrl(chapter.sourceManga.mangaId, chapter.chapNum),
       method: "GET",
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         "X-Page-Token": PAGE_TOKEN,
       },
     });
-
-    const payload = JSON.parse(Application.arrayBufferToUTF8String(buffer)) as {
-      data: { chapter: { pages: PageData[] } };
-    };
 
     return {
       id: chapter.chapterId,
@@ -304,9 +296,14 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
     };
   }
 
-  private async requestJSON<T>(url: string): Promise<T> {
-    const [, buffer] = await Application.scheduleRequest({ url, method: "GET" });
-    return JSON.parse(Application.arrayBufferToUTF8String(buffer)) as T;
+  /**
+   * Early access needs the account; a free chapter only benefits from it. A free
+   * chapter therefore opens even when the session cannot be refreshed, rather
+   * than failing on an account it never needed.
+   */
+  private async readerToken(chapter: Chapter): Promise<string | undefined> {
+    if (chapter.additionalInfo?.["early_access"]) return requireAccessToken();
+    return getAccessToken().catch(() => undefined);
   }
 }
 
