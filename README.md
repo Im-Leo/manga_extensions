@@ -26,9 +26,14 @@ of the app quietly rendering an empty shelf.
 
 ## Installing
 
-Add the published repository URL in Paperback under **Settings → Extension Repositories**, then
-install the sources you want. To run a local build on a device instead, see
-[Development](#development).
+Add the repository in Paperback under **Settings → Extension Repositories**, then install the
+sources you want:
+
+```
+https://im-leo.github.io/manga_extensions/0.9/stable
+```
+
+To run a local build on a device instead, see [Development](#development).
 
 ### AsuraScans account
 
@@ -89,7 +94,9 @@ source is therefore copied into every bundle that imports it.
 
 `tsc` is a correctness gate rather than a build step; `tsconfig.json` sets `noEmit`.
 
-The publishing branch must match `[0-9]+.[0-9]+/*` or `bundle-deploy.yaml` never fires.
+The publishing branch must match `[0-9]+.[0-9]+/*` or `bundle-deploy.yaml` never fires. Each such
+branch deploys to its own folder on `gh-pages`, and deleting the branch removes that folder. Other
+branches, such as feature branches, deploy nothing.
 
 ## Layout
 
@@ -139,11 +146,10 @@ by area, so every `from "./state"` still resolves and no consumer changed.
 | `network.ts`        | AsuraScans, FlameComics, MangaFox, MangaKakalot |
 | `url-builder/`      | AsuraScans                                      |
 
-`cache.ts` coalesces requests the app makes together: `singleFlight` shares one in-flight call
-between concurrent callers, and `TtlCache` keeps a result for a short time with one load per key.
-Every discover section on launch, or a title opening (details and chapters back to back), would
-otherwise repeat the same request. Caches are owned by the extension instance, so a test builds a
-fresh extension and starts cold.
+`cache.ts` coalesces requests the app makes together, such as every discover section on launch or
+details and chapters when a title opens: `singleFlight` shares one in-flight call between
+concurrent callers, and `TtlCache` keeps a result briefly with one load per key. Caches belong to
+the extension instance, so a test builds a fresh extension to start cold.
 
 Because `paperback-cli` inlines the whole import graph into every bundle, this code is copied into
 each extension rather than shared at runtime. One edit therefore reaches four sources at once, which
@@ -183,11 +189,9 @@ that to pay off: `reader.ts` issues page 1 alone (its key is single-use) and the
 together, since a serial loop cannot spend a larger budget, and a concurrent loop under a 4/sec
 budget cannot either.
 
-The page URLs arrive inside Dean Edwards-packed scripts. `MangaFox/unpack.ts` decodes them as data,
-substituting the dictionary words back the way the packer's own function would, so nothing the
-site sends is evaluated. Its tests run against scripts recorded from the live site. A page that
-still fails after three attempts fails the chapter, so the reader offers a retry instead of
-opening with a page missing.
+Page URLs arrive inside Dean Edwards-packed scripts, which `MangaFox/unpack.ts` decodes as data;
+nothing the site sends is evaluated. Its tests use scripts recorded from the live site. Each page
+gets three attempts, and a page that still fails fails the whole chapter.
 
 ## Content ratings
 
@@ -272,8 +276,12 @@ in a `vm` context that omits `process` but passes the host `globalThis` through,
 as `globalThis.process?.env?.PB_LIVE` (`src/tests/live-tests.ts`). It defaults to off, so a broken
 probe disables live tests rather than quietly skipping offline ones.
 
-CI mirrors the split: push and pull requests run the offline gate; a daily schedule runs the live
-suite as `continue-on-error`, where a failure means a site changed rather than the branch breaking.
+CI mirrors the split. Pull requests run conformance and the offline suite. A push to a release
+branch runs both again in a `verify` job that the deploy depends on, so a failing build never reaches
+the published repository. A daily schedule runs the live suite as `continue-on-error`, where a
+failure means a site changed rather than the branch breaking. The pre-push hook runs conformance and
+the offline suite locally. Workflow actions are pinned to commit SHAs, which Dependabot keeps
+current, and only the jobs that write to `gh-pages` get write access.
 
 `tsconfig.json` runs every strict flag TypeScript offers except one: `exactOptionalPropertyTypes`
 is deliberately off: it reports 54 errors, and 19 are the same shape `{ metadata: undefined }`
@@ -283,9 +291,7 @@ in exchange for a distinction nothing acts on.
 
 `.oxlintrc.json` enables oxlint's `correctness` category as errors and `suspicious` and `perf` as
 warnings, and `npm run lint:check` denies warnings, so all three gate a push. Each rule switched off
-carries its reason in the file. Most are the deliberate `as T` at the response boundary; one,
-`no-unnecessary-type-assertion`, is off because its autofix strips the `this as Form` cast that
-`Application.Selector` needs, which breaks the build.
+carries its reason in the file.
 
 The suite is type-checked along with the sources; `tsconfig.json` excludes nothing. This matters
 more than it sounds: JavaScript ignores extra arguments, so a test calling a since-changed helper
@@ -295,7 +301,8 @@ with every test still green, because the stale calls were invisible to both the 
 ### Writing tests
 
 Fixtures are hand-written and contain only the elements a parser queries, so a failure points at one
-selector rather than a whole page. Prefer method-form assertions (`expect(x.length).to.equal(0)`)
+selector rather than a whole page. The exception is `fixtures/mangafox-reader.ts`: packed scripts are
+recorded byte-for-byte, since a decoder is only proven against the encoding the site ships. Prefer method-form assertions (`expect(x.length).to.equal(0)`)
 over chai's property form (`.to.be.empty`); the latter is a bare property access, so a typo passes
 silently.
 
