@@ -55,6 +55,15 @@ export interface PageData {
   tile_rows: number;
 }
 
+/** A locked chapter answers 200 with `is_locked` and no `pages`, rather than an error status. */
+export interface AsuraReaderResponse {
+  data: {
+    chapter: { number: number; pages?: PageData[] };
+    is_locked?: boolean;
+    unlock_time?: string | null;
+  };
+}
+
 /** The API serves either shape for the same series, depending on its cache state. */
 export type AsuraSeriesResponse = { series: AsuraManga } | { data: { series: AsuraManga } };
 

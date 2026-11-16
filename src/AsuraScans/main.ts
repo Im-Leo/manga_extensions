@@ -39,8 +39,8 @@ import {
   type AsuraGenre,
   type AsuraSeriesResponse,
   type AsuraMetadata,
+  type AsuraReaderResponse,
   type AsuraSearchResult,
-  type PageData,
   type SearchMetadata,
 } from "./models";
 import {
@@ -48,13 +48,14 @@ import {
   latestChapterSubtitle,
   parseChapters,
   parseMangaDetails,
+  readerPages,
   toCreatorTags,
   toSearchResultItem,
   unwrapSeries,
 } from "./parsers";
 import type AsuraConfig from "./pbconfig";
 import { descramblePage } from "./reader";
-import { getAccessToken, migrateLegacySession, requireAccessToken } from "./session";
+import { getAccessToken, isSignedIn, migrateLegacySession } from "./session";
 import { PersistedTagCache } from "./tags";
 import { getMangaProgress, processChapterReadActionQueue } from "./tracking";
 import {
@@ -239,9 +240,11 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
   }
 
   async getChapterDetails(chapter: Chapter): Promise<ChapterDetails> {
-    const accessToken = await this.readerToken(chapter);
+    // Sent when available, for accounts with early access; never required, since
+    // a free chapter opens without one and a locked one is reported below.
+    const accessToken = await getAccessToken().catch(() => undefined);
 
-    const payload = await fetchJSON<{ data: { chapter: { pages: PageData[] } } }>({
+    const payload = await fetchJSON<AsuraReaderResponse>({
       url: chapterUrl(chapter.sourceManga.mangaId, chapter.chapNum),
       method: "GET",
       headers: {
@@ -253,7 +256,7 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
     return {
       id: chapter.chapterId,
       mangaId: chapter.sourceManga.mangaId,
-      pages: await Promise.all(payload.data.chapter.pages.map(descramblePage)),
+      pages: await Promise.all(readerPages(payload, isSignedIn()).map(descramblePage)),
     };
   }
 
@@ -295,16 +298,6 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
         searchQuery: { title: "", metadata: { [metadataKey]: [tag.id] } },
       })),
     };
-  }
-
-  /**
-   * Early access needs the account; a free chapter only benefits from it. A free
-   * chapter therefore opens even when the session cannot be refreshed, rather
-   * than failing on an account it never needed.
-   */
-  private async readerToken(chapter: Chapter): Promise<string | undefined> {
-    if (chapter.additionalInfo?.["early_access"]) return requireAccessToken();
-    return getAccessToken().catch(() => undefined);
   }
 }
 

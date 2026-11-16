@@ -9,7 +9,9 @@ import {
   type AsuraChapter,
   type AsuraChapterResponse,
   type AsuraManga,
+  type AsuraReaderResponse,
   type AsuraSeriesResponse,
+  type PageData,
 } from "./models";
 
 /** A future unlock date means the chapter is paywalled; absent or past means free. */
@@ -114,6 +116,29 @@ export function releaseDate(chapter: AsuraChapter, now: Date): Date {
 
   const published = new Date(chapter.published_at);
   return published <= now ? published : now;
+}
+
+/**
+ * The pages of a readable chapter.
+ *
+ * Early access is not unlocked by signing in: the API serves a locked chapter
+ * to every account without paid early access, as a 200 carrying `is_locked`
+ * and no pages. That is reported with the time it unlocks for everyone.
+ */
+export function readerPages(response: AsuraReaderResponse, signedIn: boolean): PageData[] {
+  const { chapter, is_locked: locked, unlock_time: unlockTime } = response.data;
+  if (!locked && chapter.pages) return chapter.pages;
+
+  const unlocks = unlockTime ? new Date(unlockTime) : undefined;
+  const when =
+    unlocks && !Number.isNaN(unlocks.getTime())
+      ? `It unlocks for everyone on ${unlocks.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}.`
+      : "It unlocks for everyone later.";
+  const access = signedIn
+    ? "Your account does not have early access."
+    : "Accounts with early access can read it now after signing in.";
+
+  throw new Error(`AsuraScans: chapter ${chapter.number} is early access. ${when} ${access}`);
 }
 
 export function toCreatorTags(names: string[]): Tag[] {
