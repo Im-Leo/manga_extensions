@@ -3,6 +3,8 @@
 
 import { ContentRating, SourceIntents, type ExtensionInfo } from "@paperback/types";
 
+import { DEVELOPERS } from "../utils/developers";
+
 export default {
   name: "MangaDex",
   description: "Extension that pulls content from mangadex.org.",
@@ -18,5 +20,5 @@ export default {
     SourceIntents.SETTINGS_FORM_PROVIDING,
   ],
   badges: [],
-  developers: [{ name: "Im-Leo", github: "https://github.com/Im-Leo" }],
+  developers: DEVELOPERS,
 } satisfies ExtensionInfo;

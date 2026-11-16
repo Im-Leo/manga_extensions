@@ -5,6 +5,7 @@ import type { SourceManga, UpdateManager } from "@paperback/types";
 
 import { fetchLatestUploadedChapter } from "./chapter-feed";
 import { resolveMangaIds } from "./legacy";
+import { LATEST_CHAPTER_INFO_KEY } from "./models";
 import type { SearchResponse } from "./models";
 import { fetchJSON } from "./network";
 import { reconcileStoredCompletedStatus } from "./parsers";
@@ -96,7 +97,7 @@ export async function processTitlesForUpdates(
 
           const latestApiChapter = mangaData.attributes.latestUploadedChapter;
           const latestStoredChapter =
-            storedManga.mangaInfo?.additionalInfo?.["latestUploadedChapter"];
+            storedManga.mangaInfo?.additionalInfo?.[LATEST_CHAPTER_INFO_KEY];
           const chapterChanged = (latestApiChapter ?? null) !== (latestStoredChapter ?? null);
 
           const skipUnread = shouldSkipByCount(
@@ -135,7 +136,7 @@ export async function processTitlesForUpdates(
           if (result.status === "fulfilled") {
             const stored = mangaMap.get(mangaId);
             const latestStored =
-              stored?.mangaInfo?.additionalInfo?.["latestUploadedChapter"] ?? null;
+              stored?.mangaInfo?.additionalInfo?.[LATEST_CHAPTER_INFO_KEY] ?? null;
             if (result.value === null || result.value === latestStored) {
               idsToSkip.push(mangaId);
             }

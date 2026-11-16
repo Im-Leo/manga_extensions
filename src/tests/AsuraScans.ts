@@ -5,7 +5,7 @@ import { ContentRating, type SourceManga, type TestLogger } from "@paperback/typ
 import { expect } from "chai";
 
 import { AsuraScans } from "../AsuraScans/main.js";
-import { AS_API_DOMAIN } from "../AsuraScans/models.js";
+import { AS_API_DOMAIN, AS_DOMAIN } from "../AsuraScans/models.js";
 import {
   latestChapterSubtitle,
   parseChapters,
@@ -28,15 +28,9 @@ import {
 } from "../AsuraScans/urls.js";
 import { registerAsuraSessionTests } from "./asurascans-session.js";
 import { rejectionOf } from "./async.js";
-import {
-  assertChapter,
-  assertSearchResultItem,
-  assertSourceManga,
-  assertUniqueInterceptorIds,
-} from "./contracts.js";
+import { assertChapter, assertSearchResultItem, assertSourceManga } from "./contracts.js";
 import { FUTURE_DATE, PAST_DATE, makeChapter, makeManga } from "./fixtures/asurascans.js";
-import { liveTestsEnabled } from "./live-tests.js";
-import { TestSuite, registerDefaultTests } from "./suite.js";
+import { TestSuite, registerSourceTests } from "./suite.js";
 
 const SOURCE_MANGA = {
   mangaId: "example-series",
@@ -44,10 +38,6 @@ const SOURCE_MANGA = {
 } as SourceManga;
 
 function registerOfflineTests(suite: TestSuite): void {
-  suite.test("interceptor ids are unique", async () => {
-    assertUniqueInterceptorIds(AsuraScans, "AsuraScans");
-  });
-
   suite.test("latestChapterSubtitle: survives an empty chapter list", async () => {
     expect(latestChapterSubtitle(makeManga({ latest_chapters: [] }))).to.equal(undefined);
   });
@@ -103,7 +93,7 @@ function registerOfflineTests(suite: TestSuite): void {
     expect(info.synopsis).to.equal("First line.\nSecond line.\n");
     expect(info.tagGroups?.[0]?.tags).to.deep.equal([{ id: "action", title: "Action" }]);
     expect(info.additionalInfo?.["id"]).to.equal("42");
-    expect(info.shareUrl).to.equal("https://asurascans.com/comics/example-series");
+    expect(info.shareUrl).to.equal(`${AS_DOMAIN}/comics/example-series`);
   });
 
   suite.test('parseMangaDetails: treats "_" as an unknown creator', async () => {
@@ -345,11 +335,7 @@ export async function runTests(logger: TestLogger) {
   registerAsuraSessionTests(suite);
   registerTagCacheTests(suite);
 
-  if (liveTestsEnabled()) {
-    registerDefaultTests(suite, AsuraScans, sourceInfo);
-  } else {
-    suite.skip("live end-to-end", "set PB_LIVE=1 to run network tests");
-  }
+  registerSourceTests(suite, AsuraScans, sourceInfo);
 
   await suite.run();
 }

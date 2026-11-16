@@ -8,6 +8,7 @@ import { fetchJSON } from "./network";
 import { buildTagListUrl } from "./urls";
 
 /** Tags change rarely; a month-old cache is still serviceable. */
+const TAG_CACHE_KEY = "mangadex_tag_cache";
 const TAG_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 export type TagGroup = string;
@@ -64,7 +65,7 @@ let synthRetryAt = 0;
 let synthBackoffMs = SYNTH_BACKOFF_START_MS;
 
 export function getCachedTags(): TagCache | null {
-  const raw = Application.getState("mangadex_tag_cache");
+  const raw = Application.getState(TAG_CACHE_KEY);
   if (
     !raw ||
     typeof raw !== "object" ||
@@ -99,11 +100,11 @@ export function getCachedTags(): TagCache | null {
 }
 
 export function setCachedTags(cache: TagCache): void {
-  Application.setState(cache, "mangadex_tag_cache");
+  Application.setState(cache, TAG_CACHE_KEY);
 }
 
 export function resetTagCache(): void {
-  Application.setState(undefined, "mangadex_tag_cache");
+  Application.setState(undefined, TAG_CACHE_KEY);
   synthRetryAt = 0;
   synthBackoffMs = SYNTH_BACKOFF_START_MS;
 }

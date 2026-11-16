@@ -19,6 +19,10 @@ import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor.
 import { rejectionOf } from "./async.js";
 import type { TestSuite } from "./suite.js";
 
+const RATINGS_KEY = "ratings_test";
+const SITE = "https://example.com";
+const CDN = "https://cdn.example.com";
+
 function fakeCookieStorage() {
   const stored: string[] = [];
   const storage = { setCookie: (entry: Cookie) => stored.push(entry.name) };
@@ -56,15 +60,15 @@ export function registerSharedUtilTests(suite: TestSuite): void {
       },
     };
 
-    const first = new ContentRatingCache("ratings_test", fake);
+    const first = new ContentRatingCache(RATINGS_KEY, fake);
     first.remember("alpha", ContentRating.ADULT);
-    expect(store["ratings_test"], "nothing is written until the batch settles").to.equal(undefined);
+    expect(store[RATINGS_KEY], "nothing is written until the batch settles").to.equal(undefined);
 
     first.flush();
-    expect(store["ratings_test"], "flush writes the batch once").to.not.equal(undefined);
+    expect(store[RATINGS_KEY], "flush writes the batch once").to.not.equal(undefined);
 
     // A fresh instance is what a relaunch looks like.
-    const reloaded = new ContentRatingCache("ratings_test", fake);
+    const reloaded = new ContentRatingCache(RATINGS_KEY, fake);
     expect(reloaded.knows("alpha"), "survives a restart").to.equal(true);
     expect(reloaded.recall("alpha")).to.equal(ContentRating.ADULT);
 
@@ -247,17 +251,17 @@ export function registerSharedUtilTests(suite: TestSuite): void {
 
   suite.test("interceptRequest: sets Referer, user agent, and configured cookies", async () => {
     const interceptor = new SiteInterceptor("test", {
-      domain: "https://example.com",
+      domain: SITE,
       cookies: { isAdult: "1" },
     });
 
     const result = await interceptor.interceptRequest({
-      url: "https://cdn.example.com/cover.jpg",
+      url: `${CDN}/cover.jpg`,
       method: "GET",
       cookies: { existing: "kept" },
     });
 
-    expect(result.headers?.["referer"]).to.equal("https://example.com/");
+    expect(result.headers?.["referer"]).to.equal(`${SITE}/`);
     expect(result.headers?.["user-agent"], "a real user agent").to.be.a("string").and.not.equal("");
     expect(result.cookies, "configured cookies merge with existing ones").to.deep.equal({
       existing: "kept",
@@ -268,11 +272,11 @@ export function registerSharedUtilTests(suite: TestSuite): void {
   suite.test(
     "interceptResponse: a Cloudflare challenge is resolved on the challenged URL",
     async () => {
-      const interceptor = new SiteInterceptor("test", { domain: "https://example.com" });
+      const interceptor = new SiteInterceptor("test", { domain: SITE });
 
       const raised = await rejectionOf(
         interceptor.interceptResponse(
-          { url: "https://example.com/search/story/solo", method: "GET" },
+          { url: `${SITE}/search/story/solo`, method: "GET" },
           // Mixed case: header names are case-insensitive and servers vary.
           response(403, { "CF-Mitigated": "challenge" }),
           EMPTY_BODY,
@@ -281,15 +285,15 @@ export function registerSharedUtilTests(suite: TestSuite): void {
 
       expect(raised, "a challenge must not be returned as data").to.be.instanceOf(CloudflareError);
       expect((raised as CloudflareError).resolutionRequest.url).to.equal(
-        "https://example.com/search/story/solo",
+        `${SITE}/search/story/solo`,
       );
     },
   );
 
   suite.test("interceptResponse: requireOk decides whether a non-200 throws", async () => {
-    const lenient = new SiteInterceptor("test", { domain: "https://example.com" });
-    const strict = new SiteInterceptor("test", { domain: "https://example.com", requireOk: true });
-    const request = { url: "https://example.com/x", method: "GET" };
+    const lenient = new SiteInterceptor("test", { domain: SITE });
+    const strict = new SiteInterceptor("test", { domain: SITE, requireOk: true });
+    const request = { url: `${SITE}/x`, method: "GET" };
 
     const passed = await lenient.interceptResponse(request, response(404), EMPTY_BODY);
     expect(passed, "lenient passes the body through").to.equal(EMPTY_BODY);
@@ -301,9 +305,9 @@ export function registerSharedUtilTests(suite: TestSuite): void {
   });
 
   suite.test("interceptResponse: requireOk guards pages, never images", async () => {
-    const strict = new SiteInterceptor("test", { domain: "https://example.com", requireOk: true });
-    const page = { url: "https://example.com/manga/x", method: "GET" };
-    const image = { url: "https://cdn.example.com/cover.webp", method: "GET" };
+    const strict = new SiteInterceptor("test", { domain: SITE, requireOk: true });
+    const page = { url: `${SITE}/manga/x`, method: "GET" };
+    const image = { url: `${CDN}/cover.webp`, method: "GET" };
 
     // Cover CDNs set `max-age`, so an image the app already holds comes back as
     // 304; and one that genuinely fails should leave a blank cover rather than

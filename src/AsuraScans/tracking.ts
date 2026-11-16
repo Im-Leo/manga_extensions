@@ -9,7 +9,13 @@ import type {
   TrackedMangaChapterReadAction,
 } from "@paperback/types";
 
-import { HttpError, fetchJSON, fetchResponse, isSuccessStatus } from "../utils/network";
+import {
+  HttpError,
+  JSON_HEADERS,
+  fetchJSON,
+  fetchResponse,
+  isSuccessStatus,
+} from "../utils/network";
 import type { AsuraBookmark, AsuraBookmarkResponse, AsuraScansReadingStatus } from "./models";
 import { isSignedIn, requireAccessToken } from "./session";
 import { bookmarkReadUrl, bookmarkSearchUrl, bookmarkUrl } from "./urls";
@@ -30,7 +36,7 @@ async function send(url: string, method: "POST" | "PUT", payload?: object): Prom
   const { response } = await fetchResponse({
     url,
     method,
-    headers: payload ? { ...headers, "Content-Type": "application/json" } : headers,
+    headers: payload ? { ...headers, ...JSON_HEADERS } : headers,
     body: payload ? JSON.stringify(payload) : undefined,
   });
 

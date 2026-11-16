@@ -5,6 +5,42 @@ import { URL } from "@paperback/types";
 
 import { MANGADEX_API } from "./models";
 
+/** The API's query parameter names. */
+const QUERY = {
+  authorOrArtist: "authorOrArtist",
+  availableTranslatedLanguage: "availableTranslatedLanguage[]",
+  contentRating: "contentRating[]",
+  excludedGroups: "excludedGroups[]",
+  excludedUploaders: "excludedUploaders[]",
+  group: "group",
+  hasAvailableChapters: "hasAvailableChapters",
+  ids: "ids[]",
+  includeEmptyPages: "includeEmptyPages",
+  includeExternalUrl: "includeExternalUrl",
+  includeFutureUpdates: "includeFutureUpdates",
+  includes: "includes[]",
+  includeUnavailable: "includeUnavailable",
+  limit: "limit",
+  locales: "locales[]",
+  manga: "manga[]",
+  name: "name",
+  offset: "offset",
+  orderChapter: "order[chapter]",
+  orderCreatedAt: "order[createdAt]",
+  orderName: "order[name]",
+  orderReadableAt: "order[readableAt]",
+  orderVolume: "order[volume]",
+  originalLanguage: "originalLanguage[]",
+  publicationDemographic: "publicationDemographic[]",
+  publishAtSince: "publishAtSince",
+  status: "status[]",
+  translatedLanguage: "translatedLanguage[]",
+  uploader: "uploader[]",
+  year: "year",
+} as const;
+
+const DESCENDING = "desc";
+
 function setIfNonEmpty(url: URL, key: string, values: readonly string[] | undefined): void {
   if (values && values.length > 0) {
     url.setQueryItem(key, values as string[]);
@@ -33,31 +69,31 @@ export interface MangaListUrlOptions {
 export function buildMangaListUrl(opts: MangaListUrlOptions): URL {
   const url = new URL(MANGADEX_API)
     .addPathComponent("manga")
-    .setQueryItem("limit", opts.limit.toString())
-    .setQueryItem("contentRating[]", opts.ratings as string[]);
-  setIfNonEmpty(url, "availableTranslatedLanguage[]", opts.languages);
-  setIfNonEmpty(url, "includes[]", opts.includes ?? ["cover_art"]);
-  setIfNonEmpty(url, "ids[]", opts.ids);
-  setIfNonEmpty(url, "publicationDemographic[]", opts.demographics);
-  setIfNonEmpty(url, "status[]", opts.statuses);
-  setIfNonEmpty(url, "originalLanguage[]", opts.originalLanguages);
+    .setQueryItem(QUERY.limit, opts.limit.toString())
+    .setQueryItem(QUERY.contentRating, opts.ratings as string[]);
+  setIfNonEmpty(url, QUERY.availableTranslatedLanguage, opts.languages);
+  setIfNonEmpty(url, QUERY.includes, opts.includes ?? ["cover_art"]);
+  setIfNonEmpty(url, QUERY.ids, opts.ids);
+  setIfNonEmpty(url, QUERY.publicationDemographic, opts.demographics);
+  setIfNonEmpty(url, QUERY.status, opts.statuses);
+  setIfNonEmpty(url, QUERY.originalLanguage, opts.originalLanguages);
   if (opts.offset !== undefined) {
-    url.setQueryItem("offset", opts.offset.toString());
+    url.setQueryItem(QUERY.offset, opts.offset.toString());
   }
   if (opts.hasAvailableChapters) {
-    url.setQueryItem("hasAvailableChapters", "true");
+    url.setQueryItem(QUERY.hasAvailableChapters, "true");
   }
   if (opts.orderKey && opts.orderValue) {
     url.setQueryItem(opts.orderKey, opts.orderValue);
   }
   if (opts.year !== undefined) {
-    url.setQueryItem("year", opts.year.toString());
+    url.setQueryItem(QUERY.year, opts.year.toString());
   }
   if (opts.authorOrArtist) {
-    url.setQueryItem("authorOrArtist", opts.authorOrArtist);
+    url.setQueryItem(QUERY.authorOrArtist, opts.authorOrArtist);
   }
   if (opts.group) {
-    url.setQueryItem("group", opts.group);
+    url.setQueryItem(QUERY.group, opts.group);
   }
   return url;
 }
@@ -65,7 +101,7 @@ export function buildMangaListUrl(opts: MangaListUrlOptions): URL {
 export function buildMangaByIdUrl(mangaId: string, includes?: readonly string[]): URL {
   const url = new URL(MANGADEX_API).addPathComponent("manga").addPathComponent(mangaId);
   if (includes && includes.length > 0) {
-    url.setQueryItem("includes[]", includes as string[]);
+    url.setQueryItem(QUERY.includes, includes as string[]);
   }
   return url;
 }
@@ -88,24 +124,24 @@ export function buildMangaFeedUrl(opts: MangaFeedUrlOptions): URL {
     .addPathComponent("manga")
     .addPathComponent(opts.mangaId)
     .addPathComponent("feed")
-    .setQueryItem("limit", "500")
-    .setQueryItem("offset", opts.offset.toString())
-    .setQueryItem("includes[]", opts.includes as string[])
-    .setQueryItem("excludedGroups[]", opts.blockedGroups as string[])
-    .setQueryItem("order[chapter]", "desc")
-    .setQueryItem("order[volume]", "desc")
-    .setQueryItem("order[createdAt]", "desc")
-    .setQueryItem("contentRating[]", opts.ratings as string[])
-    .setQueryItem("translatedLanguage[]", opts.languages as string[])
-    .setQueryItem("includeFutureUpdates", "0");
-  setIfNonEmpty(url, "excludedUploaders[]", opts.blockedUploaders);
+    .setQueryItem(QUERY.limit, "500")
+    .setQueryItem(QUERY.offset, opts.offset.toString())
+    .setQueryItem(QUERY.includes, opts.includes as string[])
+    .setQueryItem(QUERY.excludedGroups, opts.blockedGroups as string[])
+    .setQueryItem(QUERY.orderChapter, DESCENDING)
+    .setQueryItem(QUERY.orderVolume, DESCENDING)
+    .setQueryItem(QUERY.orderCreatedAt, DESCENDING)
+    .setQueryItem(QUERY.contentRating, opts.ratings as string[])
+    .setQueryItem(QUERY.translatedLanguage, opts.languages as string[])
+    .setQueryItem(QUERY.includeFutureUpdates, "0");
+  setIfNonEmpty(url, QUERY.excludedUploaders, opts.blockedUploaders);
   if (opts.publishAtSince) {
-    url.setQueryItem("publishAtSince", opts.publishAtSince);
+    url.setQueryItem(QUERY.publishAtSince, opts.publishAtSince);
   }
   if (opts.includeUnavailable) {
-    url.setQueryItem("includeUnavailable", "1");
-    url.setQueryItem("includeEmptyPages", "1");
-    url.setQueryItem("includeExternalUrl", "1");
+    url.setQueryItem(QUERY.includeUnavailable, "1");
+    url.setQueryItem(QUERY.includeEmptyPages, "1");
+    url.setQueryItem(QUERY.includeExternalUrl, "1");
   }
   return url;
 }
@@ -118,7 +154,7 @@ export function buildMangaAggregateUrl(
     .addPathComponent("manga")
     .addPathComponent(mangaId)
     .addPathComponent("aggregate");
-  setIfNonEmpty(url, "translatedLanguage[]", translatedLanguages);
+  setIfNonEmpty(url, QUERY.translatedLanguage, translatedLanguages);
   return url;
 }
 
@@ -143,11 +179,11 @@ export interface ChapterBatchUrlOptions {
 export function buildChapterBatchUrl(opts: ChapterBatchUrlOptions): URL {
   return new URL(MANGADEX_API)
     .addPathComponent("chapter")
-    .setQueryItem("ids[]", opts.chapterIds as string[])
-    .setQueryItem("limit", opts.chapterIds.length.toString())
-    .setQueryItem("translatedLanguage[]", opts.languages as string[])
-    .setQueryItem("contentRating[]", opts.ratings as string[])
-    .setQueryItem("includeFutureUpdates", opts.includeFutureUpdates ? "1" : "0");
+    .setQueryItem(QUERY.ids, opts.chapterIds as string[])
+    .setQueryItem(QUERY.limit, opts.chapterIds.length.toString())
+    .setQueryItem(QUERY.translatedLanguage, opts.languages as string[])
+    .setQueryItem(QUERY.contentRating, opts.ratings as string[])
+    .setQueryItem(QUERY.includeFutureUpdates, opts.includeFutureUpdates ? "1" : "0");
 }
 
 export interface LatestChaptersUrlOptions {
@@ -163,21 +199,21 @@ export interface LatestChaptersUrlOptions {
 export function buildLatestChaptersUrl(opts: LatestChaptersUrlOptions): URL {
   const url = new URL(MANGADEX_API)
     .addPathComponent("chapter")
-    .setQueryItem("limit", opts.limit.toString())
-    .setQueryItem("offset", opts.offset.toString())
-    .setQueryItem("translatedLanguage[]", opts.languages as string[])
-    .setQueryItem("contentRating[]", opts.ratings as string[])
-    .setQueryItem("order[readableAt]", "desc")
-    .setQueryItem("includeFutureUpdates", "0");
-  setIfNonEmpty(url, "uploader[]", opts.uploaders);
-  setIfNonEmpty(url, "excludedUploaders[]", opts.excludedUploaders);
-  setIfNonEmpty(url, "includes[]", opts.includes);
+    .setQueryItem(QUERY.limit, opts.limit.toString())
+    .setQueryItem(QUERY.offset, opts.offset.toString())
+    .setQueryItem(QUERY.translatedLanguage, opts.languages as string[])
+    .setQueryItem(QUERY.contentRating, opts.ratings as string[])
+    .setQueryItem(QUERY.orderReadableAt, DESCENDING)
+    .setQueryItem(QUERY.includeFutureUpdates, "0");
+  setIfNonEmpty(url, QUERY.uploader, opts.uploaders);
+  setIfNonEmpty(url, QUERY.excludedUploaders, opts.excludedUploaders);
+  setIfNonEmpty(url, QUERY.includes, opts.includes);
   return url;
 }
 
 export function buildChapterByIdUrl(chapterId: string, includes?: readonly string[]): URL {
   const url = new URL(MANGADEX_API).addPathComponent("chapter").addPathComponent(chapterId);
-  setIfNonEmpty(url, "includes[]", includes);
+  setIfNonEmpty(url, QUERY.includes, includes);
   return url;
 }
 
@@ -196,7 +232,7 @@ export function buildStatisticsBatchUrl(mangaIds: readonly string[]): URL {
   return new URL(MANGADEX_API)
     .addPathComponent("statistics")
     .addPathComponent("manga")
-    .setQueryItem("manga[]", mangaIds as string[]);
+    .setQueryItem(QUERY.manga, mangaIds as string[]);
 }
 
 export function buildCustomListUrl(listId: string): string {
@@ -208,7 +244,7 @@ export function buildUserListsUrl(userId: string, limit: number): URL {
     .addPathComponent("user")
     .addPathComponent(userId)
     .addPathComponent("list")
-    .setQueryItem("limit", limit.toString());
+    .setQueryItem(QUERY.limit, limit.toString());
 }
 
 export function buildLegacyMappingUrl(): string {
@@ -229,10 +265,10 @@ export interface CoverSearchUrlOptions {
 export function buildCoverSearchUrl(opts: CoverSearchUrlOptions): URL {
   const url = new URL(MANGADEX_API)
     .addPathComponent("cover")
-    .setQueryItem("manga[]", [opts.mangaId])
-    .setQueryItem("limit", opts.limit.toString())
-    .setQueryItem("order[volume]", opts.orderVolume ?? "asc");
-  setIfNonEmpty(url, "locales[]", opts.locales);
+    .setQueryItem(QUERY.manga, [opts.mangaId])
+    .setQueryItem(QUERY.limit, opts.limit.toString())
+    .setQueryItem(QUERY.orderVolume, opts.orderVolume ?? "asc");
+  setIfNonEmpty(url, QUERY.locales, opts.locales);
   return url;
 }
 
@@ -245,11 +281,11 @@ export interface GroupSearchUrlOptions {
 export function buildGroupSearchUrl(opts: GroupSearchUrlOptions): URL {
   const url = new URL(MANGADEX_API)
     .addPathComponent("group")
-    .setQueryItem("limit", opts.limit.toString())
-    .setQueryItem("offset", opts.offset.toString())
-    .setQueryItem("order[name]", "asc");
+    .setQueryItem(QUERY.limit, opts.limit.toString())
+    .setQueryItem(QUERY.offset, opts.offset.toString())
+    .setQueryItem(QUERY.orderName, "asc");
   if (opts.name && opts.name.trim() !== "") {
-    url.setQueryItem("name", opts.name.trim());
+    url.setQueryItem(QUERY.name, opts.name.trim());
   }
   return url;
 }

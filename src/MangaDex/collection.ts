@@ -3,6 +3,7 @@
 
 import type { ManagedCollection, ManagedCollectionChangeset, SourceManga } from "@paperback/types";
 
+import { JSON_HEADERS } from "../utils/network";
 import { resolveMangaId } from "./legacy";
 import { getRatingEnumList } from "./lookups";
 import type { MangaStatusResponse, SearchResponse } from "./models";
@@ -33,7 +34,7 @@ async function postStatus(mangaId: string, status: string | null, action: string
     await fetchJSON<{ result?: string }>({
       url: buildMangaStatusWriteUrl(resolvedId).toString(),
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: JSON_HEADERS,
       body: JSON.stringify({ status }),
     });
   } catch (e) {

@@ -11,6 +11,7 @@ import { expect } from "chai";
 import * as cheerio from "cheerio";
 
 import { MangaKakalot, MangaKakalotExtension } from "../MangaKakalot/main.js";
+import { DOMAIN } from "../MangaKakalot/models.js";
 import {
   isLastPage,
   parseChapterDetails,
@@ -27,7 +28,6 @@ import {
   assertDiscoverSectionItem,
   assertSearchResultItem,
   assertSourceManga,
-  assertUniqueInterceptorIds,
   imagePagesOf,
   isMangaTile,
 } from "./contracts.js";
@@ -45,10 +45,9 @@ import {
   READER_HTML,
   SEARCH_HTML,
 } from "./fixtures/mangakakalot.js";
-import { liveTestsEnabled } from "./live-tests.js";
 import { registerSharedNetworkTests } from "./shared-network.js";
 import { registerSharedUtilTests } from "./shared-utils.js";
-import { TestSuite, registerDefaultTests } from "./suite.js";
+import { TestSuite, registerSourceTests } from "./suite.js";
 
 const SOURCE_MANGA = {
   mangaId: "detailed-title",
@@ -56,10 +55,6 @@ const SOURCE_MANGA = {
 } as SourceManga;
 
 function registerOfflineTests(suite: TestSuite): void {
-  suite.test("interceptor ids are unique", async () => {
-    assertUniqueInterceptorIds(MangaKakalot, "MangaKakalot");
-  });
-
   suite.test("parseDiscoverSectionItems: maps every entry and honors section type", async () => {
     const $ = cheerio.load(LISTING_HTML);
     const items = parseDiscoverSectionItems($, {
@@ -112,7 +107,7 @@ function registerOfflineTests(suite: TestSuite): void {
 
     const tiles = items.filter(isMangaTile);
     expect(tiles[0]?.imageUrl).to.equal("https://img-r1.2xstorage.com/thumb/alpha.webp");
-    expect(tiles[1]?.imageUrl).to.equal("https://www.kakamanga.com/uploads/beta.webp");
+    expect(tiles[1]?.imageUrl).to.equal(`${DOMAIN}/uploads/beta.webp`);
     expect(tiles[2]?.imageUrl).to.equal("https://img-r2.2xstorage.com/thumb/gamma.webp");
   });
 
@@ -163,7 +158,7 @@ function registerOfflineTests(suite: TestSuite): void {
     expect(info.status).to.equal("Completed");
     expect(info.rating).to.be.closeTo(1.7, 0.001);
     expect(info.synopsis).to.equal("A real synopsis follows.");
-    expect(info.shareUrl).to.equal("https://www.kakamanga.com/manga/detailed-title");
+    expect(info.shareUrl).to.equal(`${DOMAIN}/manga/detailed-title`);
   });
 
   suite.test("parseMangaDetails: an adult genre raises the content rating", async () => {
@@ -286,11 +281,7 @@ export async function runTests(logger: TestLogger) {
   registerSharedUtilTests(suite);
   registerSharedNetworkTests(suite);
 
-  if (liveTestsEnabled()) {
-    registerDefaultTests(suite, MangaKakalot, sourceInfo);
-  } else {
-    suite.skip("live end-to-end", "set PB_LIVE=1 to run network tests");
-  }
+  registerSourceTests(suite, MangaKakalot, sourceInfo);
 
   await suite.run();
 }

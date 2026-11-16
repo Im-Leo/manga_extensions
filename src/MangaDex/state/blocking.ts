@@ -2,12 +2,13 @@
 /* Copyright © 2026 Im-Leo */
 
 import type { ScanlationGroupItem } from "../models";
+import { SETTING_KEYS } from "./keys";
 import { getKey, readStringArray, setKey } from "./storage";
 
 /** Scanlation groups and uploaders whose chapters are hidden. */
 
 export function getBlockedGroups(): Record<string, ScanlationGroupItem> {
-  const stored = Application.getState("blocked_groups");
+  const stored = Application.getState(SETTING_KEYS.blockedGroups);
   if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
     return {};
   }
@@ -15,10 +16,15 @@ export function getBlockedGroups(): Record<string, ScanlationGroupItem> {
 }
 
 export const saveBlockedGroups = (v: Record<string, ScanlationGroupItem>): void =>
-  setKey("blocked_groups", v);
-export const getGroupBlockingEnabled = (): boolean => getKey("group_blocking_enabled", false);
-export const setGroupBlockingEnabled = (v: boolean): void => setKey("group_blocking_enabled", v);
-export const getFuzzyBlockingEnabled = (): boolean => getKey("fuzzy_blocking_enabled", false);
-export const setFuzzyBlockingEnabled = (v: boolean): void => setKey("fuzzy_blocking_enabled", v);
-export const getBlockedUploaders = (): string[] => readStringArray("blocked_uploaders", () => []);
-export const setBlockedUploaders = (v: string[]): void => setKey("blocked_uploaders", v);
+  setKey(SETTING_KEYS.blockedGroups, v);
+export const getGroupBlockingEnabled = (): boolean =>
+  getKey(SETTING_KEYS.groupBlockingEnabled, false);
+export const setGroupBlockingEnabled = (v: boolean): void =>
+  setKey(SETTING_KEYS.groupBlockingEnabled, v);
+export const getFuzzyBlockingEnabled = (): boolean =>
+  getKey(SETTING_KEYS.fuzzyBlockingEnabled, false);
+export const setFuzzyBlockingEnabled = (v: boolean): void =>
+  setKey(SETTING_KEYS.fuzzyBlockingEnabled, v);
+export const getBlockedUploaders = (): string[] =>
+  readStringArray(SETTING_KEYS.blockedUploaders, () => []);
+export const setBlockedUploaders = (v: string[]): void => setKey(SETTING_KEYS.blockedUploaders, v);

@@ -11,6 +11,7 @@ import { expect } from "chai";
 import * as cheerio from "cheerio";
 
 import { MangaFox, MangaFoxExtension } from "../MangaFox/main.js";
+import { DOMAIN } from "../MangaFox/models.js";
 import type { SearchMetadata } from "../MangaFox/models.js";
 import {
   LAYOUT_COMPACT,
@@ -24,11 +25,7 @@ import sourceInfo from "../MangaFox/pbconfig.js";
 import { chapterUrl, directoryUrl, mangaUrl, releasesUrl } from "../MangaFox/urls.js";
 import { UNRATED_LISTING_DEFAULT } from "../utils/content-rating.js";
 import { rejectionOf } from "./async.js";
-import {
-  assertDiscoverSectionItem,
-  assertSourceManga,
-  assertUniqueInterceptorIds,
-} from "./contracts.js";
+import { assertDiscoverSectionItem, assertSourceManga } from "./contracts.js";
 import { withFakeNetwork } from "./fakes/application.js";
 import {
   CHAPTER_LIST_HTML,
@@ -41,9 +38,8 @@ import {
   PAGER_ABSENT_HTML,
   PAGER_WITHOUT_HREF_HTML,
 } from "./fixtures/mangafox.js";
-import { liveTestsEnabled } from "./live-tests.js";
 import { registerMangaFoxReaderTests } from "./mangafox-reader.js";
-import { TestSuite, registerDefaultTests } from "./suite.js";
+import { TestSuite, registerSourceTests } from "./suite.js";
 
 const SOURCE_MANGA = {
   mangaId: "sword_king",
@@ -51,10 +47,6 @@ const SOURCE_MANGA = {
 } as SourceManga;
 
 function registerOfflineTests(suite: TestSuite): void {
-  suite.test("interceptor ids are unique", async () => {
-    assertUniqueInterceptorIds(MangaFox, "MangaFox");
-  });
-
   suite.test("parseListing: compact layout", async () => {
     // Listing markup here carries title, cover, chapter and a star score, but no
     // genres, so unknown must resolve to something that still blurs.
@@ -69,14 +61,12 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("urls: every page URL is final, so no redirect downgrades it to http", async () => {
-    expect(mangaUrl("sword_king")).to.equal("https://fanfox.net/manga/sword_king/");
-    expect(releasesUrl(1)).to.equal("https://fanfox.net/releases/");
-    expect(releasesUrl(3)).to.equal("https://fanfox.net/releases/3.html");
-    expect(directoryUrl(1)).to.equal("https://fanfox.net/directory/?news");
-    expect(directoryUrl(2)).to.equal("https://fanfox.net/directory/2.html?news");
-    expect(chapterUrl("sword_king", "c001.1")).to.equal(
-      "https://fanfox.net/manga/sword_king/c001.1/1.html",
-    );
+    expect(mangaUrl("sword_king")).to.equal(`${DOMAIN}/manga/sword_king/`);
+    expect(releasesUrl(1)).to.equal(`${DOMAIN}/releases/`);
+    expect(releasesUrl(3)).to.equal(`${DOMAIN}/releases/3.html`);
+    expect(directoryUrl(1)).to.equal(`${DOMAIN}/directory/?news`);
+    expect(directoryUrl(2)).to.equal(`${DOMAIN}/directory/2.html?news`);
+    expect(chapterUrl("sword_king", "c001.1")).to.equal(`${DOMAIN}/manga/sword_king/c001.1/1.html`);
   });
 
   suite.test("covers: http and protocol-relative sources are upgraded to https", async () => {
@@ -280,11 +270,7 @@ export async function runTests(logger: TestLogger) {
   registerRequestTests(suite);
   registerMangaFoxReaderTests(suite);
 
-  if (liveTestsEnabled()) {
-    registerDefaultTests(suite, MangaFox, sourceInfo);
-  } else {
-    suite.skip("live end-to-end", "set PB_LIVE=1 to run network tests");
-  }
+  registerSourceTests(suite, MangaFox, sourceInfo);
 
   await suite.run();
 }

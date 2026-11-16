@@ -15,7 +15,7 @@ import type {
   Relationship,
   StatisticsResponse,
 } from "./models";
-import { MANGADEX_DOMAIN, Status } from "./models";
+import { MANGADEX_DOMAIN, Status, LATEST_CHAPTER_INFO_KEY } from "./models";
 import { ratingIconMap, resolvePaperbackRating } from "./ratings";
 import { buildCoverImageUrl, extractCoverImageUrl } from "./relationships";
 import {
@@ -337,7 +337,7 @@ export const parseMangaDetails = (
       additionalInfo: mangaDetails.latestUploadedChapter
         ? {
             mdContentRating: mangaItemDetails.mdContentRating,
-            latestUploadedChapter: mangaDetails.latestUploadedChapter,
+            [LATEST_CHAPTER_INFO_KEY]: mangaDetails.latestUploadedChapter,
           }
         : { mdContentRating: mangaItemDetails.mdContentRating },
     },

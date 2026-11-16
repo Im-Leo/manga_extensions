@@ -2,7 +2,14 @@
 /* Copyright © 2026 Im-Leo */
 
 import { singleFlight } from "../utils/cache";
-import { HttpError, InvalidResponseError, fetchResponse, isSuccessStatus } from "../utils/network";
+import {
+  HttpError,
+  InvalidResponseError,
+  JSON_HEADERS,
+  JSON_MEDIA_TYPE,
+  fetchResponse,
+  isSuccessStatus,
+} from "../utils/network";
 import type { AsuraUser } from "./models";
 import { authUrl } from "./urls";
 
@@ -118,7 +125,7 @@ async function postTokens(url: string, payload: object): Promise<TokenPayload["d
   const { response, body } = await fetchResponse({
     url,
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    headers: { ...JSON_HEADERS, Accept: JSON_MEDIA_TYPE },
     body: JSON.stringify(payload),
   });
 
