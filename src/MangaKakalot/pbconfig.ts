@@ -6,7 +6,7 @@ import { ContentRating, SourceIntents, type ExtensionInfo } from "@paperback/typ
 export default {
   name: "MangaKakalot",
   description: "Extension that pulls content from mangakakalot.gg.",
-  version: "1.1.0",
+  version: "1.1.1",
   icon: "icon.png",
   language: "en",
   contentRating: ContentRating.EVERYONE,
