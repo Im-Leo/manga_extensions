@@ -15,6 +15,15 @@
   every character typed into the password field, reports a wrong password in the form, and adds
   **Sign Out**. The access token is refreshed only near expiry, and concurrent refreshes are
   coalesced so rotation can no longer sign the user out.
+- FlameComics 1.1.1: fewer duplicate requests. The three discover sections share one homepage
+  payload, opening a title fetches its series data once for details and chapters, and concurrent
+  callers share one build-id lookup and one catalog load.
+- MangaFox 1.1.2: opening a title fetches its page once instead of once for details and again for
+  chapters.
+- MangaKakalot 1.1.1: the search form reuses the genre list for six hours instead of downloading
+  the homepage each time it opens.
+- AsuraScans 1.2.0: the genre and creator lists load in parallel, and the discover sections that
+  need them share one load.
 
 ### Fixed
 
@@ -26,6 +35,8 @@
   save fails.
 - AsuraScans 1.2.0: bookmark lookups broke for titles containing `&`, `#` or `?`, which were sent
   unencoded.
+- AsuraScans 1.2.0: cached search tags never expired, so genres and creators added on the site
+  never appeared. They now refresh daily, keeping the old list if a refresh fails.
 
 - AsuraScans 1.1.1: opening a title or refreshing the library failed for some series. The series
   endpoint answers `{ series }` from its cache and `{ data: { series } }` on a cache miss; both

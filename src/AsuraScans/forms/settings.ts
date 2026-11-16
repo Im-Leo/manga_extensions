@@ -13,9 +13,9 @@ import {
 
 import type { AsuraUser } from "../models";
 import * as session from "../session";
+import { clearCachedTags } from "../tags";
 
 const SHOW_UPCOMING_KEY = "prerelease";
-const TAGS_KEY = "tags";
 
 export function getShowUpcomingChapters(): boolean {
   return Application.getState(SHOW_UPCOMING_KEY) === "true";
@@ -23,10 +23,6 @@ export function getShowUpcomingChapters(): boolean {
 
 function setShowUpcomingChapters(value: boolean): void {
   Application.setState(value.toString(), SHOW_UPCOMING_KEY);
-}
-
-export function clearCachedTags(): void {
-  Application.setState(undefined, TAGS_KEY);
 }
 
 function messageOf(error: unknown): string {

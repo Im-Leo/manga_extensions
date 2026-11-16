@@ -54,6 +54,7 @@ import {
 import type AsuraConfig from "./pbconfig";
 import { descramblePage } from "./reader";
 import { getAccessToken, migrateLegacySession, requireAccessToken } from "./session";
+import { PersistedTagCache } from "./tags";
 import { getMangaProgress, processChapterReadActionQueue } from "./tracking";
 import {
   chapterListUrl,
@@ -80,6 +81,8 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
   });
 
   private readonly interceptor = new SiteInterceptor("main", { domain: AS_DOMAIN });
+
+  private readonly tags = new PersistedTagCache(() => this.fetchTagSections());
 
   async initialise(): Promise<void> {
     this.rateLimiter.registerInterceptor();
@@ -164,13 +167,16 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
   }
 
   async getSearchTags(): Promise<TagSection[]> {
-    const cached = Application.getState("tags") as TagSection[] | undefined;
-    if (cached) return cached;
+    return this.tags.get();
+  }
 
-    const genres = await fetchJSON<{ data: AsuraGenre[] }>(genresUrl());
-    const creators = await fetchJSON<{ data: AsuraCreatorRequest }>(creatorsUrl());
+  private async fetchTagSections(): Promise<TagSection[]> {
+    const [genres, creators] = await Promise.all([
+      fetchJSON<{ data: AsuraGenre[] }>(genresUrl()),
+      fetchJSON<{ data: AsuraCreatorRequest }>(creatorsUrl()),
+    ]);
 
-    const sections: TagSection[] = [
+    return [
       {
         id: TagSectionId.Genres,
         title: "Genres",
@@ -182,9 +188,6 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
       { id: "artist", title: "Artist", tags: toCreatorTags(creators.data.artists) },
       { id: "author", title: "Author", tags: toCreatorTags(creators.data.authors) },
     ];
-
-    Application.setState(sections, "tags");
-    return sections;
   }
 
   async supportsTagExclusion(): Promise<boolean> {
