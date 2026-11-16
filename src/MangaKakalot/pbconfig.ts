@@ -8,7 +8,7 @@ import { DEVELOPERS } from "../utils/developers";
 export default {
   name: "MangaKakalot",
   description: "Extension that pulls content from kakamanga.com.",
-  version: "1.1.1",
+  version: "1.2.0",
   icon: "icon.png",
   language: "en",
   contentRating: ContentRating.EVERYONE,
