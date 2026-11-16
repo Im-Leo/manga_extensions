@@ -172,10 +172,17 @@ export class ContentRatingCache {
     const stored = this.store.read(this.storageKey);
     if (!stored || typeof stored !== "object") return;
 
-    for (const [mangaId, rating] of Object.entries(stored as Record<string, unknown>)) {
-      if (typeof rating === "string") this.ratings.set(mangaId, rating as ContentRating);
+    for (const [mangaId, rating] of Object.entries(stored)) {
+      if (isContentRating(rating)) this.ratings.set(mangaId, rating);
     }
   }
+}
+
+const CONTENT_RATINGS: ReadonlySet<unknown> = new Set(Object.values(ContentRating));
+
+/** Persisted state outlives the code that wrote it, so a stored value is checked, not trusted. */
+function isContentRating(value: unknown): value is ContentRating {
+  return CONTENT_RATINGS.has(value);
 }
 
 /**

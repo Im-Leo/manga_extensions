@@ -21,7 +21,7 @@ import type { TestSuite } from "./suite.js";
 
 function fakeCookieStorage() {
   const stored: string[] = [];
-  const storage = { setCookie: (cookie: Cookie) => stored.push(cookie.name) };
+  const storage = { setCookie: (entry: Cookie) => stored.push(entry.name) };
 
   return { stored, storage: storage as unknown as CookieStorageInterceptor };
 }
