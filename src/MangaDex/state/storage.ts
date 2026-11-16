@@ -14,7 +14,7 @@ export const THUMBNAIL_QUALITY_SCHEMA = 1;
 
 /** Returns a copy: callers that splice or push must not mutate persisted state. */
 export function readStringArray(key: string, fallback: () => string[]): string[] {
-  const stored = Application.getState(key) as unknown;
+  const stored = Application.getState(key);
   return Array.isArray(stored) ? (stored as string[]).slice() : fallback();
 }
 

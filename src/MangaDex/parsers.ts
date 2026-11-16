@@ -186,7 +186,7 @@ export const parseMangaList = (
     const mangaDetails = manga.attributes;
     const title = decodeHTML(
       resolvePrimaryTitleRaw(
-        mangaDetails.title as Record<string, string | undefined>,
+        mangaDetails.title,
         mangaDetails.altTitles,
         languages,
         romanizedPriorityEnabled,
@@ -383,7 +383,7 @@ export function parseMangaItemDetails(
 
   const primaryTitle: string = decodeHTML(
     resolvePrimaryTitleRaw(
-      mangaDetails.title as Record<string, string | undefined>,
+      mangaDetails.title,
       mangaDetails.altTitles,
       languages,
       resolvedSettings.romanizedPriorityEnabled,
@@ -392,10 +392,8 @@ export function parseMangaItemDetails(
 
   const priorityLanguages = resolvedSettings.languagePriority;
   const preferredMatch =
-    getFirstLanguageMatch(
-      mangaDetails.title as Record<string, string | undefined>,
-      priorityLanguages,
-    ) ?? getFirstLanguageMatchFromAlt(mangaDetails.altTitles, priorityLanguages);
+    getFirstLanguageMatch(mangaDetails.title, priorityLanguages) ??
+    getFirstLanguageMatchFromAlt(mangaDetails.altTitles, priorityLanguages);
   const preferredLanguageTitle = preferredMatch ? decodeHTML(preferredMatch) : undefined;
 
   const secondaryTitles: string[] = Array.from(

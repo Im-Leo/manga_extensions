@@ -10,6 +10,23 @@ const STATUS_CACHE_TTL_MS = 60 * 1000;
 let cachedStatusContent: string[] | null = null;
 let cachedStatusFetchedAt = 0;
 
+function wrapText(text: string): string[] {
+  return text
+    .replace(/<br\s*\/?>\s*<br\s*\/?>/gi, "\n\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .split("\n")
+    .map((paragraph) => paragraph.trim());
+}
+
+function formatTimeSince(diffSec: number): string {
+  const min = Math.floor(diffSec / 60);
+  const hour = Math.floor(min / 60);
+  if (hour > 0) return `${hour} ${hour === 1 ? "hour" : "hours"} ago`;
+  if (min > 0) return `${min} ${min === 1 ? "minute" : "minutes"} ago`;
+  const sec = Math.max(0, diffSec);
+  return `${sec} ${sec === 1 ? "second" : "seconds"} ago`;
+}
+
 export class WebsiteStatusForm extends Form {
   private statusData: { loading: boolean; content: string[] };
   // Only the newest fetch may write, so a slow load cannot overwrite a refresh.
@@ -95,22 +112,6 @@ export class WebsiteStatusForm extends Form {
       }
 
       const content: string[] = [];
-
-      const wrapText = (text: string): string[] =>
-        text
-          .replace(/<br\s*\/?>\s*<br\s*\/?>/gi, "\n\n")
-          .replace(/<br\s*\/?>/gi, "\n")
-          .split("\n")
-          .map((paragraph) => paragraph.trim());
-
-      const formatTimeSince = (diffSec: number): string => {
-        const min = Math.floor(diffSec / 60);
-        const hour = Math.floor(min / 60);
-        if (hour > 0) return `${hour} ${hour === 1 ? "hour" : "hours"} ago`;
-        if (min > 0) return `${min} ${min === 1 ? "minute" : "minutes"} ago`;
-        const sec = Math.max(0, diffSec);
-        return `${sec} ${sec === 1 ? "second" : "seconds"} ago`;
-      };
 
       const LOCAL_TIME_OPTIONS: Intl.DateTimeFormatOptions = {
         year: "numeric",
@@ -206,7 +207,7 @@ export class WebsiteStatusForm extends Form {
           if (title) content.push(title);
           $(incident)
             .find(".update")
-            .each((_, update) => renderUpdate(update, false));
+            .each((_index, update) => renderUpdate(update, false));
         });
       } else {
         content.push("None reported");
@@ -248,7 +249,7 @@ export class WebsiteStatusForm extends Form {
           content.push("");
           content.push(dateText);
 
-          $day.find("div.incident-container").each((_, incidentElem) => {
+          $day.find("div.incident-container").each((_index, incidentElem) => {
             const $incident = $(incidentElem);
             const $title = $incident.find(".incident-title");
             let impactLevel = "unknown";
@@ -256,7 +257,7 @@ export class WebsiteStatusForm extends Form {
             else if ($title.hasClass("impact-critical")) impactLevel = "Critical";
             else if ($title.hasClass("impact-minor")) impactLevel = "Minor";
             content.push(`${impactLevel}: ${$title.text().trim()}`);
-            $incident.find(".update").each((_, update) => renderUpdate(update, true));
+            $incident.find(".update").each((_updateIndex, update) => renderUpdate(update, true));
           });
         } else {
           content.push("");

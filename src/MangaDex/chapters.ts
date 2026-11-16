@@ -102,9 +102,7 @@ export async function getChapters(
   const evaluateRatingGate = (): void => {
     if (ratingGateEvaluated) return;
     ratingGateEvaluated = true;
-    const storedMdRating = sourceManga.mangaInfo.additionalInfo?.["mdContentRating"] as
-      | string
-      | undefined;
+    const storedMdRating = sourceManga.mangaInfo.additionalInfo?.["mdContentRating"];
     const mangaPbRating = sourceManga.mangaInfo.contentRating;
     if (!isRatingAllowed(storedMdRating, mangaPbRating, ratings)) {
       const ratingForMessage = storedMdRating ?? mangaPbRating;
@@ -187,7 +185,7 @@ export async function getChapters(
       const idMatches = mangaItem?.id?.toLowerCase() === mangaId;
       const mangaAttrs = mangaItem?.attributes;
       if (idMatches && mangaAttrs) {
-        resetChapterNumbersOnVolume = mangaAttrs.chapterNumbersResetOnNewVolume === true;
+        resetChapterNumbersOnVolume = mangaAttrs.chapterNumbersResetOnNewVolume;
       }
       if (optimizeUpdates && idMatches && mangaAttrs?.latestUploadedChapter) {
         verifiedLatestChapterId = mangaAttrs.latestUploadedChapter;

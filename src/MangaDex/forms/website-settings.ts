@@ -26,7 +26,7 @@ export class WebsiteSettingsForm extends Form {
             return NavigationRow("sessionInfo", {
               title: "Session Info",
               form: new SessionInfoForm(() => this.reloadForm()),
-            }) as FormItemElement<unknown>;
+            });
           }
           return this.createLoginButton();
         }),

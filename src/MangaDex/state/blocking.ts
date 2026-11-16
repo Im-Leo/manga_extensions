@@ -7,7 +7,7 @@ import { getKey, readStringArray, setKey } from "./storage";
 /** Scanlation groups and uploaders whose chapters are hidden. */
 
 export function getBlockedGroups(): Record<string, ScanlationGroupItem> {
-  const stored = Application.getState("blocked_groups") as unknown;
+  const stored = Application.getState("blocked_groups");
   if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
     return {};
   }

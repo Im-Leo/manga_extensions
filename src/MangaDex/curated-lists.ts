@@ -136,12 +136,12 @@ function isCuratedListCache(value: unknown): value is CuratedListCache {
 }
 
 function readCache(): CuratedListCache | null {
-  const raw = Application.getState(CURATED_LISTS_CACHE_KEY) as unknown;
+  const raw = Application.getState(CURATED_LISTS_CACHE_KEY);
   return isCuratedListCache(raw) ? raw : null;
 }
 
 function writeCache(ids: Partial<CuratedListIds>): void {
-  Application.setState({ ids, fetchedAt: Date.now() } as CuratedListCache, CURATED_LISTS_CACHE_KEY);
+  Application.setState({ ids, fetchedAt: Date.now() }, CURATED_LISTS_CACHE_KEY);
 }
 
 function withFallbacks(ids: Partial<CuratedListIds>): CuratedListIds {

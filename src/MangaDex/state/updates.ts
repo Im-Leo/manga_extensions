@@ -6,7 +6,7 @@ import { getKey, readStringArray, setKey } from "./storage";
 /** How the library update flow batches work and which titles it skips. */
 
 export function getUpdateBatchSize(): number {
-  const stored = Application.getState("update_batch_size") as unknown;
+  const stored = Application.getState("update_batch_size");
   if (typeof stored !== "number" || !Number.isInteger(stored) || stored < 1) return 100;
   return Math.min(stored, 100);
 }
