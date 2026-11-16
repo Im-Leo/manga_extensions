@@ -10,6 +10,7 @@ import {
   latestChapterSubtitle,
   parseChapters,
   parseMangaDetails,
+  releaseDate,
   toSearchResultItem,
   unwrapSeries,
 } from "../AsuraScans/parsers.js";
@@ -241,6 +242,51 @@ function registerOfflineTests(suite: TestSuite): void {
     const shown = parseChapters(response, SOURCE_MANGA, true);
     expect(shown, "enabling upcoming chapters reveals them").to.have.lengthOf(2);
     expect(shown[1]?.additionalInfo?.["early_access"]).to.equal("true");
+  });
+
+  suite.test("parseChapters: no chapter is ever dated in the future", async () => {
+    // Paperback crashes on a future-dated chapter, and an early access chapter's
+    // unlock time is always ahead.
+    const [early, free] = parseChapters(
+      {
+        data: [
+          makeChapter({ id: 2, number: 2, is_premium: true, early_access_until: FUTURE_DATE }),
+          makeChapter({ id: 1, number: 1, early_access_until: PAST_DATE }),
+        ],
+      },
+      SOURCE_MANGA,
+      true,
+    );
+
+    expect(early?.publishDate?.toISOString(), "early access: its publication").to.equal(
+      "2026-01-10T00:00:00.000Z",
+    );
+    expect(free?.publishDate?.toISOString(), "unlocked: when it became free").to.equal(
+      new Date(PAST_DATE).toISOString(),
+    );
+  });
+
+  suite.test("releaseDate: clamps a publication that is still ahead to now", async () => {
+    const now = new Date("2026-01-01T00:00:00Z");
+    const scheduled = makeChapter({ published_at: "2026-06-01T00:00:00Z" });
+
+    expect(releaseDate(scheduled, now).toISOString()).to.equal(now.toISOString());
+  });
+
+  suite.test("parseChapters: early access is shown in the chapter title", async () => {
+    const [titled, untitled] = parseChapters(
+      {
+        data: [
+          makeChapter({ id: 2, number: 2, is_premium: true, title: "Summons" }),
+          makeChapter({ id: 1, number: 1, is_premium: true }),
+        ],
+      },
+      SOURCE_MANGA,
+      true,
+    );
+
+    expect(titled?.title).to.equal("Summons (Early Access)");
+    expect(untitled?.title).to.equal("Early Access");
   });
 
   suite.test("parseChapters: produces valid chapters", async () => {

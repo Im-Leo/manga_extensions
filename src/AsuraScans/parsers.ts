@@ -6,6 +6,7 @@ import type { Chapter, SearchResultItem, SourceManga, Tag } from "@paperback/typ
 import { rateContent } from "../utils/content-rating";
 import {
   AS_DOMAIN,
+  type AsuraChapter,
   type AsuraChapterResponse,
   type AsuraManga,
   type AsuraSeriesResponse,
@@ -85,17 +86,34 @@ export function parseChapters(
     chapters.push({
       sourceManga,
       chapterId: chapter.id.toString(),
-      title: chapter.title ?? undefined,
+      title: chapter.is_premium ? earlyAccessTitle(chapter.title) : (chapter.title ?? undefined),
       langCode: "en",
       chapNum: chapter.number,
       volume: 0,
       sortingIndex: chapter.number,
-      publishDate: new Date(chapter.early_access_until ?? chapter.published_at),
+      publishDate: releaseDate(chapter, new Date()),
       additionalInfo: chapter.is_premium ? { early_access: "true" } : undefined,
     });
   }
 
   return chapters;
+}
+
+function earlyAccessTitle(title: string | undefined): string {
+  return title ? `${title} (Early Access)` : "Early Access";
+}
+
+/**
+ * When the chapter became readable for everyone, or its publication if that is
+ * still ahead. Never later than `now`: Paperback crashes when a chapter is dated
+ * in the future, and an early access chapter's unlock time always is.
+ */
+export function releaseDate(chapter: AsuraChapter, now: Date): Date {
+  const unlocked = chapter.early_access_until ? new Date(chapter.early_access_until) : undefined;
+  if (unlocked && unlocked <= now) return unlocked;
+
+  const published = new Date(chapter.published_at);
+  return published <= now ? published : now;
 }
 
 export function toCreatorTags(names: string[]): Tag[] {
