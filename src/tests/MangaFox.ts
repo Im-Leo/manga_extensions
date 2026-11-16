@@ -123,14 +123,10 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("content rating: a rating learned from details reaches later tiles", async () => {
-    const idOf = () =>
-      parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, [])[0]?.mangaId ?? "";
-    const mangaId = idOf();
-
     const before = parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, [])[0];
     expect(before?.contentRating, "not yet known").to.equal(UNRATED_LISTING_DEFAULT);
 
-    parseMangaDetails(cheerio.load(DETAIL_SAFE_HTML), mangaId);
+    parseMangaDetails(cheerio.load(DETAIL_SAFE_HTML), before?.mangaId ?? "");
 
     const after = parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, [])[0];
     expect(after?.contentRating, "learned from the detail page").to.equal(ContentRating.EVERYONE);

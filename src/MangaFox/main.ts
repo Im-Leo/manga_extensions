@@ -181,7 +181,7 @@ export class MangaFoxExtension implements ExtensionImpl<typeof MangaFoxConfig> {
 
     const pages = await extractChapterPages(await fetchCheerio(url), url);
     if (pages.length === 0) {
-      throw new Error(`No pages found for chapter ${chapter.chapterId}`);
+      throw new Error(`MangaFox: no pages found for chapter ${chapter.chapterId}`);
     }
 
     return { id: chapter.chapterId, mangaId: chapter.sourceManga.mangaId, pages };
@@ -202,8 +202,6 @@ function toDiscoverItems(entries: ListingEntry[], section: DiscoverSection): Dis
     switch (section.type) {
       case DiscoverSectionType.featured:
         return { ...entry, supertitle: entry.subtitle, type: "featuredCarouselItem" as const };
-      case DiscoverSectionType.chapterUpdates:
-        return { ...entry, chapterId: "", type: "chapterUpdatesCarouselItem" as const };
       case DiscoverSectionType.prominentCarousel:
         return { ...entry, type: "prominentCarouselItem" as const };
       default:
