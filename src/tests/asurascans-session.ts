@@ -61,6 +61,16 @@ const PAGES = {
   body: { data: { chapter: { pages: [{ url: "https://cdn.example.com/1.webp" }] } } },
 };
 
+const LOCKED = {
+  body: {
+    data: {
+      chapter: { number: 1, page_count: 0, is_premium: true },
+      is_locked: true,
+      unlock_time: "2026-11-17T00:01:17.211355Z",
+    },
+  },
+};
+
 async function noChapters(): Promise<Chapter[]> {
   return [];
 }
@@ -259,13 +269,29 @@ export function registerAsuraSessionTests(suite: TestSuite): void {
     },
   );
 
-  suite.test("getChapterDetails: early access asks for sign-in before any request", async () => {
+  suite.test("getChapterDetails: a locked chapter says when it unlocks, signed out", async () => {
+    // Recorded shape: the API answers 200 with `is_locked` and no `pages`.
     session.signOut();
 
-    await withFakeNetwork([], async (network) => {
+    await withFakeNetwork([["/chapters/1", LOCKED]], async (network) => {
       const error = await rejectionOf(AsuraScans.getChapterDetails(chapter(true)));
-      expect(error.message).to.equal(session.SIGN_IN_REQUIRED);
-      expect(network.requests).to.have.lengthOf(0);
+
+      expect(error.message).to.contain("chapter 1 is early access");
+      expect(error.message).to.contain("unlocks for everyone on");
+      expect(error.message).to.contain("after signing in");
+      expect(network.requests[0]?.headers?.["Authorization"]).to.equal(undefined);
+    });
+  });
+
+  suite.test("getChapterDetails: a locked chapter, signed in, names the account", async () => {
+    session.signOut();
+    await signInWith(HOUR);
+
+    await withFakeNetwork([["/chapters/1", LOCKED]], async (network) => {
+      const error = await rejectionOf(AsuraScans.getChapterDetails(chapter(true)));
+
+      expect(error.message).to.contain("does not have early access");
+      expect(network.requests[0]?.headers?.["Authorization"]).to.equal("Bearer access-1");
     });
   });
 
