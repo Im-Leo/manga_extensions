@@ -125,7 +125,7 @@ function registerOfflineTests(suite: TestSuite): void {
     });
 
     expect(items).to.have.lengthOf(1);
-    expect(items.filter(isMangaTile)[0]?.mangaId).to.equal("valid-one");
+    expect(items.find(isMangaTile)?.mangaId).to.equal("valid-one");
   });
 
   suite.test("isLastPage: mid-listing, final page, and no pager", async () => {

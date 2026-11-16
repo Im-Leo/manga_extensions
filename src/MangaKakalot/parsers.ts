@@ -335,7 +335,7 @@ function hasMangaId(item: unknown): item is { mangaId: string } {
     typeof item === "object" &&
     item !== null &&
     "mangaId" in item &&
-    typeof (item as { mangaId: unknown }).mangaId === "string"
+    typeof item.mangaId === "string"
   );
 }
 
