@@ -10,16 +10,13 @@ import {
   type Response,
 } from "@paperback/types";
 
+import { headerValue, isSuccessStatus } from "./network";
+
 /**
  * One clearance issues several cookies — `cf_clearance`, `__cf_bm`, `_cfuvid`,
  * `cf_chl_*` — and persisting only the named one loses the session.
  */
 const CLOUDFLARE_COOKIE = /^_{0,2}cf/i;
-
-/** 2xx, plus the 304 a conditional request earns when the cached copy still stands. */
-function isSuccess(status: number): boolean {
-  return (status >= 200 && status < 300) || status === 304;
-}
 
 const IMAGE_PATH = /\.(?:avif|gif|jpe?g|png|webp)(?:[?#]|$)/i;
 
@@ -97,7 +94,7 @@ export class SiteInterceptor extends PaperbackInterceptor {
     response: Response,
     data: ArrayBuffer,
   ): Promise<ArrayBuffer> {
-    if (response.headers?.["cf-mitigated"] === "challenge") {
+    if (headerValue(response.headers, "cf-mitigated") === "challenge") {
       const domain = this.options.domain;
 
       throw new CloudflareError(
@@ -117,7 +114,11 @@ export class SiteInterceptor extends PaperbackInterceptor {
     // Only page requests. `requireOk` exists to catch an error page that still
     // parses, and an image that fails should leave a blank cover rather than
     // throw an error through a grid of them.
-    if (this.options.requireOk && !isImageRequest(request.url) && !isSuccess(response.status)) {
+    if (
+      this.options.requireOk &&
+      !isImageRequest(request.url) &&
+      !isSuccessStatus(response.status)
+    ) {
       throw new Error(`Request failed with status ${response.status}: ${request.url}`);
     }
 
