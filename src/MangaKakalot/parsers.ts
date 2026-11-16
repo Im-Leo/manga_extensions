@@ -115,12 +115,18 @@ export function parseMangaDetails($: CheerioAPI, mangaId: string): SourceManga {
   };
 }
 
+/**
+ * Throws on an unsuccessful payload. Returning `[]` there would tell the app the
+ * title lost its chapters, rather than that the request failed and can be retried.
+ */
 export function parseChapterList(
-  response: ChapterListResponse | undefined,
+  response: ChapterListResponse,
   sourceManga: SourceManga,
 ): Chapter[] {
-  const apiChapters = response?.data?.chapters;
-  if (!response?.success || !Array.isArray(apiChapters)) return [];
+  const apiChapters = response.data?.chapters;
+  if (!response.success || !Array.isArray(apiChapters)) {
+    throw new Error(`MangaKakalot: the chapter list for ${sourceManga.mangaId} failed to load`);
+  }
 
   return apiChapters.map((chapter: ApiChapter, index) => ({
     sourceManga,

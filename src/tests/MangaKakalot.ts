@@ -44,6 +44,7 @@ import {
   SEARCH_HTML,
 } from "./fixtures/mangakakalot.js";
 import { liveTestsEnabled } from "./live-tests.js";
+import { registerSharedNetworkTests } from "./shared-network.js";
 import { registerSharedUtilTests } from "./shared-utils.js";
 import { TestSuite, registerDefaultTests } from "./suite.js";
 
@@ -244,9 +245,11 @@ function registerOfflineTests(suite: TestSuite): void {
     expect(Number.isFinite(chapters[0]!.publishDate!.getTime())).to.equal(true);
   });
 
-  suite.test("parseChapterList: an unsuccessful payload yields no chapters", async () => {
-    expect(parseChapterList(CHAPTER_LIST_FAILED_JSON, SOURCE_MANGA)).to.deep.equal([]);
-    expect(parseChapterList(undefined, SOURCE_MANGA)).to.deep.equal([]);
+  suite.test("parseChapterList: an unsuccessful payload fails instead of emptying", async () => {
+    expect(() => parseChapterList(CHAPTER_LIST_FAILED_JSON, SOURCE_MANGA)).to.throw(
+      "failed to load",
+    );
+    expect(() => parseChapterList({ success: true }, SOURCE_MANGA)).to.throw("failed to load");
   });
 }
 
@@ -256,6 +259,7 @@ export async function runTests(logger: TestLogger) {
   registerOfflineTests(suite);
 
   registerSharedUtilTests(suite);
+  registerSharedNetworkTests(suite);
 
   if (liveTestsEnabled()) {
     registerDefaultTests(suite, MangaKakalot, sourceInfo);
