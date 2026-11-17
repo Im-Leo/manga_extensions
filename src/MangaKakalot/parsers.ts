@@ -146,6 +146,11 @@ export function parseChapterDetails($: CheerioAPI, chapter: Chapter): ChapterDet
     .map((node) => resolveImageUrl($(node)))
     .filter((url) => url.length > 0);
 
+  // An error or moved page still parses; an empty chapter must not open as if it were one.
+  if (pages.length === 0) {
+    throw new Error(`MangaKakalot: no pages found for chapter ${chapter.chapterId}`);
+  }
+
   return {
     id: chapter.chapterId,
     mangaId: chapter.sourceManga.mangaId,

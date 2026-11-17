@@ -236,6 +236,13 @@ function registerOfflineTests(suite: TestSuite): void {
     ]);
   });
 
+  suite.test("parseChapterDetails: a page without reader images fails", async () => {
+    const $ = cheerio.load("<html><body></body></html>");
+    const chapter = { chapterId: "chapter-1", sourceManga: SOURCE_MANGA } as never;
+
+    expect(() => parseChapterDetails($, chapter)).to.throw(/no pages/);
+  });
+
   suite.test("parseGenres: keeps complete tags only", async () => {
     const genres = parseGenres(cheerio.load(GENRES_HTML));
 
