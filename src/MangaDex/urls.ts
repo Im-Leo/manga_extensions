@@ -4,6 +4,7 @@
 import { URL } from "@paperback/types";
 
 import { MANGADEX_API } from "./models";
+import { FEED_PAGE_LIMIT } from "./utils";
 
 /** The API's query parameter names. */
 const QUERY = {
@@ -124,7 +125,7 @@ export function buildMangaFeedUrl(opts: MangaFeedUrlOptions): URL {
     .addPathComponent("manga")
     .addPathComponent(opts.mangaId)
     .addPathComponent("feed")
-    .setQueryItem(QUERY.limit, "500")
+    .setQueryItem(QUERY.limit, FEED_PAGE_LIMIT.toString())
     .setQueryItem(QUERY.offset, opts.offset.toString())
     .setQueryItem(QUERY.includes, opts.includes as string[])
     .setQueryItem(QUERY.excludedGroups, opts.blockedGroups as string[])
