@@ -104,7 +104,9 @@ export function searchUrl(
   if (query.title) url = url.addQuery(QUERY.search, searchTerm(query.title));
 
   url = url.addQuery(QUERY.sort, sortingOption?.id ?? "latest");
-  url = url.addQuery(QUERY.order, query.metadata?.orderIsDescending ? "desc" : "asc");
+  // Descending unless chosen otherwise: the form shows the toggle on before it is touched, and
+  // discover's genre tiles search without opening the form at all.
+  url = url.addQuery(QUERY.order, query.metadata?.orderIsDescending === false ? "asc" : "desc");
 
   if (query.metadata?.genres?.length) {
     url = url.addQuery(QUERY.genres, query.metadata.genres.join(","));

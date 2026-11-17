@@ -162,7 +162,7 @@ function registerOfflineTests(suite: TestSuite): void {
     const plain = searchUrl({ title: "" }, undefined, 0, 20);
 
     expect(plain, "default sort").to.contain("sort=latest");
-    expect(plain, "default order is ascending").to.contain("order=asc");
+    expect(plain, "default order matches the form's descending toggle").to.contain("order=desc");
     expect(plain, "no search key when the title is empty").to.not.contain("search=");
 
     const descending = searchUrl(
@@ -173,6 +173,14 @@ function registerOfflineTests(suite: TestSuite): void {
     );
     expect(descending).to.contain("sort=rating");
     expect(descending).to.contain("order=desc");
+
+    const ascending = searchUrl(
+      { title: "", metadata: { orderIsDescending: false } },
+      undefined,
+      0,
+      20,
+    );
+    expect(ascending).to.contain("order=asc");
   });
 
   suite.test("urls: search collapses apostrophes to a wildcard", async () => {
