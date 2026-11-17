@@ -14,3 +14,8 @@ export function htmlToPlainText(html: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
+
+/** A caught value's message, for showing to the user. */
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}

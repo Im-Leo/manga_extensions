@@ -10,13 +10,10 @@ import {
   type FormSectionElement,
 } from "@paperback/types";
 
+import { errorMessage } from "../../utils/text";
 import type { AsuraUser } from "../models";
 import * as session from "../session";
 import { clearCachedTags } from "../tags";
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 /**
  * Account and preferences.
@@ -108,7 +105,7 @@ export class AsuraSettingForm extends Form {
       await session.signIn(this.email, this.password);
       this.password = "";
     } catch (error) {
-      this.signInError = messageOf(error);
+      this.signInError = errorMessage(error);
     } finally {
       this.signingIn = false;
       this.reloadForm();

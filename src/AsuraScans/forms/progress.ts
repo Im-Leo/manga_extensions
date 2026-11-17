@@ -11,6 +11,7 @@ import {
   type SourceManga,
 } from "@paperback/types";
 
+import { errorMessage } from "../../utils/text";
 import { readingStatuses, type AsuraBookmark, type AsuraScansReadingStatus } from "../models";
 import { createBookmark, findBookmark, seriesIdOf, updateBookmark } from "../tracking";
 
@@ -19,10 +20,6 @@ const UNKNOWN_CHAPTER_COUNT = 9999;
 
 function toReadingStatus(value: string | undefined): AsuraScansReadingStatus {
   return readingStatuses.find((status) => status.id === value)?.id ?? "reading";
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 /**
@@ -54,7 +51,7 @@ export class TrackingForm extends Form {
       this.status = toReadingStatus(this.bookmark?.status);
       this.lastReadChapter = this.bookmark?.last_read_chapter ?? 0;
     } catch (error) {
-      this.loadError = messageOf(error);
+      this.loadError = errorMessage(error);
     } finally {
       this.loading = false;
       this.reloadForm();

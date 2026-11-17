@@ -18,7 +18,7 @@ import {
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor.js";
 import { HttpError } from "../utils/network.js";
 import { normalizeRating } from "../utils/rating.js";
-import { htmlToPlainText } from "../utils/text.js";
+import { errorMessage, htmlToPlainText } from "../utils/text.js";
 import { rejectionOf } from "./async.js";
 import type { TestSuite } from "./suite.js";
 
@@ -124,6 +124,11 @@ export function registerSharedUtilTests(suite: TestSuite): void {
       "<p>First &amp; <strong>bold</strong>.</p><p>Second&#8217;s line<br>broken&nbsp;here</p>";
     expect(htmlToPlainText(html)).to.equal("First & bold.\n\nSecond’s line\nbroken here");
     expect(htmlToPlainText("  plain text  ")).to.equal("plain text");
+  });
+
+  suite.test("errorMessage: reads an Error, stringifies anything else", async () => {
+    expect(errorMessage(new Error("boom"))).to.equal("boom");
+    expect(errorMessage("text")).to.equal("text");
   });
 
   suite.test("normalizeRating: scales to 0-1 and treats no score as none", async () => {
