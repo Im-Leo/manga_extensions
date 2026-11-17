@@ -90,12 +90,12 @@ end-to-end pass or its recorded skip. Shared modules are tested from `shared-uti
 
 ## CI
 
-| Workflow                 | Trigger                  | Does                                          |
-| ------------------------ | ------------------------ | --------------------------------------------- |
-| `conformance.yaml`       | pull request             | conformance checks                            |
-| `test.yaml`              | pull request, daily      | offline suite; live suite daily, non-blocking |
-| `bundle-deploy.yaml`     | push to a release branch | `verify` (conformance + offline), then deploy |
-| `delete-branch-ext.yaml` | release branch deleted   | removes that branch's folder from `gh-pages`  |
+| Workflow                 | Trigger                        | Does                                               |
+| ------------------------ | ------------------------------ | -------------------------------------------------- |
+| `checks.yaml`            | pull request, called by deploy | conformance, offline suite, bundle                 |
+| `live-tests.yaml`        | daily                          | live suite; non-blocking, read the artifact        |
+| `bundle-deploy.yaml`     | push to a release branch       | `checks.yaml`, then deploy; a deploy never cancels |
+| `delete-branch-ext.yaml` | release branch deleted         | removes that branch's folder from `gh-pages`       |
 
 Actions are pinned to commit SHAs and kept current by Dependabot. Only jobs that write to
 `gh-pages` have write access.

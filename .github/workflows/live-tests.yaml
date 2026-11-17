@@ -1,4 +1,4 @@
-name: Run Tests
+name: Live Tests
 
 on:
   # Live sources drift without any commit here, so they are polled on a
@@ -7,45 +7,20 @@ on:
   # fast.
   schedule:
     - cron: "0 6 * * *"
-  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.ref }}-${{ github.workflow }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  offline:
-    name: Offline Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Setup Node.js Environment
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: npm
-      - name: Install Dependencies
-        run: npm ci
-      # Deterministic and network-free: this one gates the branch.
-      - name: Run Offline Tests
-        run: npm test
-      - name: Upload Test Results
-        if: ${{ github.event_name != 'pull_request' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: tests.json
-          path: bundles/tests.json
-
   live:
     name: Live Tests
-    # Only worth running when the sites themselves might have changed.
-    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # Informational. A failure here means a site changed or blocked us, not that
     # the branch is broken — MangaKakalot's Cloudflare challenge fails from CI by
     # design. Read the artifact rather than the job status.
@@ -56,15 +31,16 @@ jobs:
       - name: Setup Node.js Environment
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - name: Install Dependencies
         run: npm ci
       - name: Run Live Tests
         run: npm run test:live
       - name: Upload Live Test Results
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: tests-live.json
           path: bundles/tests-live.json
+          retention-days: 14
