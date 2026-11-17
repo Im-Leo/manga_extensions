@@ -165,9 +165,10 @@ export function registerMangaDexRequestTests(suite: TestSuite): void {
     await withFakeNetwork([["/manga?", EMPTY_LIST]], async (network) => {
       await getSearchResults({ title: "frieren" }, undefined, undefined);
 
-      expect(decodeURIComponent(network.requests[0]?.url ?? "")).to.contain(
-        "availableTranslatedLanguage",
-      );
+      const url = decodeURIComponent(network.requests[0]?.url ?? "");
+      expect(url).to.contain("availableTranslatedLanguage");
+      expect(url).to.contain("title=frieren");
+      expect(url, "a title search is not an id lookup").to.not.contain("ids[]");
     });
   });
 }

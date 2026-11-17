@@ -216,10 +216,8 @@ async function getOrderedMangaCarousel(
     hasAvailableChapters: true,
     orderKey,
     orderValue: "desc",
+    createdAtSince,
   });
-  if (createdAtSince) {
-    url.setQueryItem("createdAtSince", createdAtSince);
-  }
 
   const json = await fetchJSON<SearchResponse>({ url: url.toString(), method: "GET" });
   assertDataArray(json, section.title);

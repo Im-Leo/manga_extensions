@@ -11,6 +11,9 @@ const QUERY = {
   authorOrArtist: "authorOrArtist",
   availableTranslatedLanguage: "availableTranslatedLanguage[]",
   contentRating: "contentRating[]",
+  createdAtSince: "createdAtSince",
+  excludedTags: "excludedTags[]",
+  excludedTagsMode: "excludedTagsMode",
   excludedGroups: "excludedGroups[]",
   excludedUploaders: "excludedUploaders[]",
   group: "group",
@@ -21,6 +24,8 @@ const QUERY = {
   includeFutureUpdates: "includeFutureUpdates",
   includes: "includes[]",
   includeUnavailable: "includeUnavailable",
+  includedTags: "includedTags[]",
+  includedTagsMode: "includedTagsMode",
   limit: "limit",
   locales: "locales[]",
   manga: "manga[]",
@@ -35,6 +40,7 @@ const QUERY = {
   publicationDemographic: "publicationDemographic[]",
   publishAtSince: "publishAtSince",
   status: "status[]",
+  title: "title",
   translatedLanguage: "translatedLanguage[]",
   uploader: "uploader[]",
   year: "year",
@@ -65,6 +71,12 @@ export interface MangaListUrlOptions {
   year?: number;
   authorOrArtist?: string;
   group?: string;
+  title?: string;
+  createdAtSince?: string;
+  includedTags?: readonly string[];
+  excludedTags?: readonly string[];
+  includedTagsMode?: string;
+  excludedTagsMode?: string;
 }
 
 export function buildMangaListUrl(opts: MangaListUrlOptions): URL {
@@ -96,6 +108,12 @@ export function buildMangaListUrl(opts: MangaListUrlOptions): URL {
   if (opts.group) {
     url.setQueryItem(QUERY.group, opts.group);
   }
+  if (opts.title) url.setQueryItem(QUERY.title, opts.title);
+  if (opts.createdAtSince) url.setQueryItem(QUERY.createdAtSince, opts.createdAtSince);
+  setIfNonEmpty(url, QUERY.includedTags, opts.includedTags);
+  setIfNonEmpty(url, QUERY.excludedTags, opts.excludedTags);
+  if (opts.includedTagsMode) url.setQueryItem(QUERY.includedTagsMode, opts.includedTagsMode);
+  if (opts.excludedTagsMode) url.setQueryItem(QUERY.excludedTagsMode, opts.excludedTagsMode);
   return url;
 }
 

@@ -124,18 +124,10 @@ export async function getSearchResults(
     year,
     authorOrArtist,
     group,
+    ids: searchByIdsValue ? [searchByIdsValue] : undefined,
+    title: searchByIdsValue ? undefined : searchTitleValue,
+    ...(isExactIdLookup ? {} : { includedTags, excludedTags, includedTagsMode, excludedTagsMode }),
   });
-  if (searchByIdsValue) {
-    url.setQueryItem("ids[]", searchByIdsValue);
-  } else if (searchTitleValue) {
-    url.setQueryItem("title", searchTitleValue);
-  }
-  if (!isExactIdLookup) {
-    if (includedTagsMode) url.setQueryItem("includedTagsMode", includedTagsMode);
-    if (excludedTagsMode) url.setQueryItem("excludedTagsMode", excludedTagsMode);
-    url.setQueryItem("includedTags[]", includedTags);
-    url.setQueryItem("excludedTags[]", excludedTags);
-  }
 
   const json = await fetchJSON<SearchResponse>({ url: url.toString(), method: "GET" });
 
