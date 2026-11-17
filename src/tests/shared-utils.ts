@@ -16,6 +16,7 @@ import {
   rateContent,
 } from "../utils/content-rating.js";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor.js";
+import { HttpError } from "../utils/network.js";
 import { rejectionOf } from "./async.js";
 import type { TestSuite } from "./suite.js";
 
@@ -298,7 +299,11 @@ export function registerSharedUtilTests(suite: TestSuite): void {
     const passed = await lenient.interceptResponse(request, response(404), EMPTY_BODY);
     expect(passed, "lenient passes the body through").to.equal(EMPTY_BODY);
 
-    await rejectionOf(strict.interceptResponse(request, response(404), EMPTY_BODY));
+    const failure = await rejectionOf(strict.interceptResponse(request, response(404), EMPTY_BODY));
+    expect(failure, "callers can tell a missing page from other failures").to.be.instanceOf(
+      HttpError,
+    );
+    expect((failure as HttpError).status).to.equal(404);
 
     const ok = await strict.interceptResponse(request, response(200), EMPTY_BODY);
     expect(ok, "a 200 passes even under requireOk").to.equal(EMPTY_BODY);

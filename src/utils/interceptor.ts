@@ -10,7 +10,7 @@ import {
   type Response,
 } from "@paperback/types";
 
-import { headerValue, isSuccessStatus } from "./network";
+import { HttpError, headerValue, isSuccessStatus } from "./network";
 
 /**
  * One clearance issues several cookies — `cf_clearance`, `__cf_bm`, `_cfuvid`,
@@ -118,7 +118,7 @@ export class SiteInterceptor extends PaperbackInterceptor {
       !isImageRequest(request.url) &&
       !isSuccessStatus(response.status)
     ) {
-      throw new Error(`Request failed with status ${response.status}: ${request.url}`);
+      throw new HttpError(response.status, request.url);
     }
 
     return data;
