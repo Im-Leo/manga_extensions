@@ -174,16 +174,14 @@ export const readingStatuses = [
 ] as const;
 export type AsuraScansReadingStatus = (typeof readingStatuses)[number]["id"];
 
-/** Static: the API exposes no endpoint enumerating statuses or types. */
+/** Static: the API exposes no endpoint enumerating statuses or types. No selection means all. */
 export const statuses: Tag[] = [
-  { title: "All", id: "all" },
   { title: "Ongoing", id: "ongoing" },
   { title: "Hiatus", id: "hiatus" },
   { title: "Completed", id: "completed" },
   { title: "Dropped", id: "dropped" },
 ];
 export const types: Tag[] = [
-  { title: "All", id: "all" },
   { title: "Manhwa", id: "manhwa" },
   { title: "Manhua", id: "manhua" },
   { title: "Mangatoon", id: "mangatoon" },

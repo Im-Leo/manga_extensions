@@ -65,7 +65,7 @@ export class AsuraScansAdvancedSearchForm extends AdvancedSearchForm {
     return [
       SelectRow("seriesStatus", {
         title: tag.title,
-        subtitle: "Select the series status(es) to include in search results",
+        subtitle: "Only series with this status; leave empty for any",
         value: this.searchMetadata.seriesStatus ?? [],
         minItemCount: 0,
         maxItemCount: 1,
@@ -87,7 +87,7 @@ export class AsuraScansAdvancedSearchForm extends AdvancedSearchForm {
     return [
       SelectRow("seriesType", {
         title: "Series Type",
-        subtitle: "Select the series type(s) to include in search results",
+        subtitle: "Only series of this type; leave empty for any",
         value: this.searchMetadata.seriesType ?? [],
         minItemCount: 0,
         maxItemCount: 1,

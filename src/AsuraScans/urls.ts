@@ -109,6 +109,7 @@ export function searchUrl(
     url = url.addQuery(QUERY.genres, query.metadata.genres.join(","));
   }
 
+  // "all" no longer appears in the form, but searches saved before may still carry it.
   const status = query.metadata?.seriesStatus?.[0];
   if (status && status !== "all") url = url.addQuery(QUERY.status, status);
 
