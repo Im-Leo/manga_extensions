@@ -338,6 +338,10 @@ export const buildFilterOptions = (
   };
 };
 
+/** Option ids are encoded names; filters compare against the names the candidates carry. */
+const optionName = (id: string, options: OptionItem[]): string | undefined =>
+  options.find((option) => option.id === id)?.value;
+
 /** Splits one tristate selection into the names to require and the names to reject. */
 const parseTristateFilter = (
   filterMap: Record<string, "included" | "excluded"> | undefined,
@@ -354,7 +358,7 @@ const parseTristateFilter = (
     return false;
   });
 
-  const nameOf = (id: string) => availableOptions.find((opt) => opt.id === id)?.value;
+  const nameOf = (id: string) => optionName(id, availableOptions);
   return {
     hasFilters: true,
     requestedNames: requestedIds.map(nameOf),
@@ -387,9 +391,17 @@ export const applyAdvancedFilters = (
   const artist = parseTristateFilter(selectedFilters.artist, availableFilters.artist);
   const categoriesAnd = (selectedFilters.categoriesMode ?? "or") === "and";
 
-  const wantTypes = (selectedFilters.types?.length ?? 0) > 0;
-  const wantStatus = (selectedFilters.status?.length ?? 0) > 0;
-  const wantYear = (selectedFilters.year?.length ?? 0) > 0;
+  const namesOf = (ids: string[] | undefined, options: OptionItem[]) =>
+    ids?.length ? new Set(ids.map((id) => optionName(id, options))) : undefined;
+  const types = namesOf(selectedFilters.types, availableFilters.types);
+  const status = namesOf(selectedFilters.status, availableFilters.status);
+  const years = namesOf(selectedFilters.year, availableFilters.year);
+  const language = selectedFilters.language
+    ? optionName(selectedFilters.language, availableFilters.language)
+    : undefined;
+  const country = selectedFilters.country
+    ? optionName(selectedFilters.country, availableFilters.country)
+    : undefined;
 
   return candidates.filter((candidate) => {
     if (
@@ -436,11 +448,11 @@ export const applyAdvancedFilters = (
     )
       return false;
 
-    if (wantTypes && !selectedFilters.types?.includes(candidate.type)) return false;
-    if (wantStatus && !selectedFilters.status?.includes(candidate.status)) return false;
-    if (wantYear && !selectedFilters.year?.includes(candidate.year.toString())) return false;
-    if (selectedFilters.language && selectedFilters.language !== candidate.language) return false;
-    if (selectedFilters.country && selectedFilters.country !== candidate.country) return false;
+    if (types && !types.has(candidate.type)) return false;
+    if (status && !status.has(candidate.status)) return false;
+    if (years && !years.has(candidate.year.toString())) return false;
+    if (selectedFilters.language && language !== candidate.language) return false;
+    if (selectedFilters.country && country !== candidate.country) return false;
 
     return true;
   });

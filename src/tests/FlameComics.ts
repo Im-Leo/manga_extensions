@@ -7,6 +7,8 @@ import { expect } from "chai";
 import { FlameComics } from "../FlameComics/main.js";
 import { CDN } from "../FlameComics/models.js";
 import {
+  applyAdvancedFilters,
+  buildFilterOptions,
   enrichLatestWithBrowseData,
   isNovel,
   parseChapterDetails,
@@ -46,6 +48,11 @@ const SOURCE_MANGA = {
 
 const LATEST_SORT = { id: "latest", label: "Latest Update" };
 
+/** The option id the search form stores for `value`. */
+function idOf(options: { id: string; value: string }[], value: string): string {
+  return options.find((option) => option.value === value)!.id;
+}
+
 /** The rating a search tile shows for `series`. */
 function rate(series: Parameters<typeof toSortableList>[0][number]) {
   const [sortable] = toSortableList([series], SIMPLE_SERIES);
@@ -53,6 +60,47 @@ function rate(series: Parameters<typeof toSortableList>[0][number]) {
 }
 
 function registerOfflineTests(suite: TestSuite): void {
+  suite.test("applyAdvancedFilters: single-value fields match names with spaces", async () => {
+    const korean = {
+      ...toSortableList([makeSeries({ series_id: 1 })], SIMPLE_SERIES)[0]!,
+      type: "Web Comic",
+      status: "On Hiatus",
+      year: 2024,
+      language: "Korean (Hangul)",
+      country: "South Korea",
+    };
+    const other = {
+      ...korean,
+      series_id: 2,
+      type: "Manga",
+      status: "Ongoing",
+      year: 2020,
+      language: "Japanese",
+      country: "Japan",
+    };
+    const options = buildFilterOptions([korean, other], {
+      types: ["all", "Web Comic", "Manga"],
+      status: ["all", "On Hiatus", "Ongoing"],
+      year: ["all", "2024", "2020"],
+      search: "",
+      order: "desc",
+    });
+    const selections = {
+      types: [idOf(options.types, "Web Comic")],
+      status: [idOf(options.status, "On Hiatus")],
+      year: [idOf(options.year, "2024")],
+      language: idOf(options.language, "Korean (Hangul)"),
+      country: idOf(options.country, "South Korea"),
+    };
+    for (const [field, value] of Object.entries(selections)) {
+      const matched = applyAdvancedFilters([korean, other], { [field]: value }, options);
+      expect(
+        matched.map((item) => item.series_id),
+        field,
+      ).to.deep.equal([1]);
+    }
+  });
+
   suite.test("isNovel: detects novels by id and by type", async () => {
     expect(isNovel(NOVEL_BY_ID), "novel_id marks a novel").to.equal(true);
     expect(isNovel(NOVEL_BY_TYPE), '"Web Novel" type marks a novel').to.equal(true);
