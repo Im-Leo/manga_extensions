@@ -11,6 +11,7 @@ import {
 import type { CheerioAPI } from "cheerio";
 
 import { ContentRatingCache, rateContent } from "../utils/content-rating";
+import { normalizeRating } from "../utils/rating";
 
 /** Listing markup carries no genres, so tiles default until a detail page teaches this. */
 const ratings = new ContentRatingCache();
@@ -132,7 +133,10 @@ export function parseMangaDetails($: CheerioAPI, mangaId: string): SourceManga {
         $(".detail-info-cover-img", $(".detail-info-cover")).attr("src") ?? "",
       ),
       synopsis: $("p.fullcontent").text().trim(),
-      rating: Number($("span.item-score", section).text().trim().replace(",", ".")),
+      rating: normalizeRating(
+        Number($("span.item-score", section).text().trim().replace(",", ".")),
+        5,
+      ),
       status:
         $(".detail-info-right-title-tip", section).text().trim().toUpperCase() === "COMPLETED"
           ? "Completed"

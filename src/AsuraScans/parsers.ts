@@ -4,6 +4,7 @@
 import type { Chapter, SearchResultItem, SourceManga, Tag } from "@paperback/types";
 
 import { rateContent } from "../utils/content-rating";
+import { normalizeRating } from "../utils/rating";
 import {
   AS_DOMAIN,
   type AsuraChapter,
@@ -82,6 +83,7 @@ export function parseMangaDetails(manga: AsuraManga): SourceManga {
       synopsis: manga.description.replaceAll("<p>", "").replaceAll("</p>", "\n"),
       thumbnailUrl: manga.cover_url ?? manga.cover,
       contentRating: rateContent(genreNames(manga)),
+      rating: normalizeRating(manga.rating, 10),
       shareUrl: `${AS_DOMAIN}/comics/${manga.slug}`,
       // Tracking endpoints address a series by numeric id, not by slug.
       additionalInfo: { id: manga.id.toString() },

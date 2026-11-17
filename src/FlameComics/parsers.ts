@@ -251,7 +251,6 @@ export const parseSeriesDetail = (
       bannerUrl: cover,
       artist: (series.artist ?? []).join(", "),
       author: (series.author ?? []).join(", "),
-      rating: 0,
       tagGroups: tagSections,
       shareUrl: `${DOMAIN}/series/${series.series_id}`,
     },

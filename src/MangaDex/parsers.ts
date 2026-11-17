@@ -3,6 +3,7 @@
 
 import type { ContentRating, SourceManga, Tag, TagSection } from "@paperback/types";
 
+import { normalizeRating } from "../utils/rating";
 import { ROMANIZED_CODES, STATUSES } from "./lookups";
 import type {
   AggregateResponse,
@@ -316,9 +317,7 @@ export const parseMangaDetails = (
     ? buildCoverImageUrl(mangaId, coverFileNameOverride, thumbnailQuality)
     : extractCoverImageUrl(json.data.relationships, mangaId, thumbnailQuality);
 
-  const rating = ratingJson?.statistics?.[mangaId]?.rating?.average
-    ? ratingJson.statistics[mangaId].rating.average / 10
-    : undefined;
+  const rating = normalizeRating(ratingJson?.statistics?.[mangaId]?.rating?.average ?? 0, 10);
 
   return {
     mangaId: mangaId,

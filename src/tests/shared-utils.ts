@@ -17,6 +17,7 @@ import {
 } from "../utils/content-rating.js";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor.js";
 import { HttpError } from "../utils/network.js";
+import { normalizeRating } from "../utils/rating.js";
 import { rejectionOf } from "./async.js";
 import type { TestSuite } from "./suite.js";
 
@@ -115,6 +116,16 @@ export function registerSharedUtilTests(suite: TestSuite): void {
     for (const genre of ["violence", "bloody", "suggestive", "romance", "school-life", "action"]) {
       expect(rateContent([genre]), `${genre} is safe`).to.equal(ContentRating.EVERYONE);
     }
+  });
+
+  suite.test("normalizeRating: scales to 0-1 and treats no score as none", async () => {
+    expect(normalizeRating(4, 5)).to.equal(0.8);
+    expect(normalizeRating(9.5, 10)).to.equal(0.95);
+    expect(normalizeRating(12, 10), "clamped").to.equal(1);
+    for (const score of [0, -1, Number.NaN]) {
+      expect(normalizeRating(score, 10), String(score)).to.equal(undefined);
+    }
+    expect(normalizeRating(4, 0), "no scale").to.equal(undefined);
   });
 
   suite.test("rateContent: no genres at all is unknown, not safe", async () => {

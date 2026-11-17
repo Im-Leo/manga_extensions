@@ -137,6 +137,16 @@ function registerOfflineTests(suite: TestSuite): void {
     );
   });
 
+  suite.test("parseMangaDetails: reports the 0-10 score on the 0-1 scale", async () => {
+    expect(parseMangaDetails(makeManga({ rating: 9.2 })).mangaInfo.rating).to.be.closeTo(
+      0.92,
+      1e-9,
+    );
+    expect(parseMangaDetails(makeManga({ rating: 0 })).mangaInfo.rating, "unrated").to.equal(
+      undefined,
+    );
+  });
+
   suite.test("parseMangaDetails: a payload without genres has no tags", async () => {
     const details = parseMangaDetails(makeManga({ genres: undefined }));
     expect(details.mangaInfo.tagGroups?.flatMap((group) => group.tags).length ?? 0).to.equal(0);

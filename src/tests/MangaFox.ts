@@ -163,7 +163,7 @@ function registerOfflineTests(suite: TestSuite): void {
     expect(info.primaryTitle).to.equal("Safe Title");
     expect(info.status).to.equal("Ongoing");
     expect(info.author).to.equal("Someone");
-    expect(info.rating).to.equal(4.3);
+    expect(info.rating, "4,3 out of 5").to.be.closeTo(0.86, 1e-9);
     expect(info.tagGroups?.[0]?.tags.map((tag) => tag.title)).to.deep.equal(["Comedy", "Romance"]);
   });
 
