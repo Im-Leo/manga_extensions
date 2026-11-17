@@ -109,3 +109,12 @@ async function fetchMangaDetails(resolvedId: string): Promise<SourceManga> {
     coverFileNameOverride,
   );
 }
+
+/** The id of the newest chapter in any language, or null for a title with none. */
+export async function fetchLatestUploadedChapter(mangaId: string): Promise<string | null> {
+  const json = await fetchJSON<MangaDetailsResponse>({
+    url: buildMangaByIdUrl(mangaId).toString(),
+    method: "GET",
+  });
+  return json.data?.attributes?.latestUploadedChapter ?? null;
+}

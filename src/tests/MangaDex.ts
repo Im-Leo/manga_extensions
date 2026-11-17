@@ -7,9 +7,9 @@ import { expect } from "chai";
 import {
   assignChapterNumber,
   buildChapterIdentifier,
+  isRatingAllowed,
   normalizePagesCount,
-} from "../MangaDex/chapter-parsers.js";
-import { isRatingAllowed } from "../MangaDex/chapter-utils.js";
+} from "../MangaDex/chapter-helpers.js";
 import { GROUP_SEARCH_PAGE_SIZE, hasNextGroupPage } from "../MangaDex/forms/group-block.js";
 import { swapItems } from "../MangaDex/forms/reorderable.js";
 import { MangaDex } from "../MangaDex/main.js";

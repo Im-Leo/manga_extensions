@@ -3,8 +3,8 @@
 
 import type { SourceManga, UpdateManager } from "@paperback/types";
 
-import { fetchLatestUploadedChapter } from "./chapter-feed";
 import { resolveMangaIds } from "./legacy";
+import { fetchLatestUploadedChapter } from "./manga";
 import { LATEST_CHAPTER_INFO_KEY } from "./models";
 import type { SearchResponse } from "./models";
 import { fetchJSON } from "./network";

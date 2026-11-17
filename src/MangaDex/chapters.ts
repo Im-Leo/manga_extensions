@@ -3,17 +3,18 @@
 
 import type { Chapter, ChapterDetails, MangaInfo, SourceManga } from "@paperback/types";
 
-import { fetchLatestUploadedChapter, readInlinedMangaItem } from "./chapter-feed";
 import {
   assignChapterNumber,
   buildChapterIdentifier,
   extractScanlationGroupNames,
+  isGroupNameBlocked,
+  isRatingAllowed,
   normalizePagesCount,
-} from "./chapter-parsers";
-import { isGroupNameBlocked, isRatingAllowed } from "./chapter-utils";
+  readInlinedMangaItem,
+} from "./chapter-helpers";
 import { MDLanguages } from "./languages";
 import { resolveChapterId, resolveMangaId } from "./legacy";
-import { getMangaDetails } from "./manga";
+import { fetchLatestUploadedChapter, getMangaDetails } from "./manga";
 import { LATEST_CHAPTER_INFO_KEY } from "./models";
 import type { ChapterDetailsResponse, ChapterRelationship, ChapterResponse } from "./models";
 import { fetchJSON } from "./network";
