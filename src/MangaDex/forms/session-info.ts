@@ -77,8 +77,10 @@ export class SessionInfoForm extends Form {
         this.reloadForm();
         this.onAuthChanged();
         return;
+      // Another path already rotated or ended the session; show what it left.
       case "racedRotation":
       case "racedLogout":
+        this.reloadForm();
         return;
       case "loggedOut":
         this.justLoggedOut = true;

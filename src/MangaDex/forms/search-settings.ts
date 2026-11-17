@@ -3,6 +3,7 @@
 
 import { ButtonRow, Form, Section, ToggleRow, type FormSectionElement } from "@paperback/types";
 
+import { errorMessage } from "../../utils/text";
 import { RATINGS, STATUSES } from "../lookups";
 import {
   getRelevanceScoringEnabled,
@@ -70,7 +71,7 @@ export class SearchSettingsForm extends Form {
         }),
         ToggleRow("show_search_rating_subtitle", {
           title: "Show Rating",
-          subtitle: "Adds average rating but slower loading",
+          subtitle: "Adds the average rating and shortens to V./C.; loads slower",
           value: getShowSearchRatingInSubtitle(),
           onValueChange: Application.Selector(
             this as SearchSettingsForm,
@@ -133,9 +134,8 @@ export class SearchSettingsForm extends Form {
     try {
       const cache = await forceRefreshTags();
       this.refreshStatus = `Refreshed ${cache.tags.length} tags`;
-      Application.invalidateDiscoverSections();
     } catch (error) {
-      this.refreshStatus = `Refresh failed: ${error instanceof Error ? error.message : String(error)}`;
+      this.refreshStatus = `Refresh failed: ${errorMessage(error)}`;
     } finally {
       this.isRefreshing = false;
       this.reloadForm();
