@@ -1,8 +1,8 @@
 {
-  "buildTime": "2026-11-17T00:11:56.808Z",
+  "buildTime": "2026-11-17T00:22:37.367Z",
   "builtWith": {
-    "toolchain": "1.0.0-alpha.92",
-    "types": "1.0.0-alpha.92"
+    "toolchain": "1.0.0-alpha.94",
+    "types": "1.0.0-alpha.94"
   },
   "repository": {
     "name": "Coffee's Extensions (0.9)",
@@ -57,7 +57,7 @@
     {
       "name": "MangaDex",
       "description": "Extension that pulls content from mangadex.org.",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "icon": "icon.png",
       "language": "multi",
       "contentRating": "SAFE",
