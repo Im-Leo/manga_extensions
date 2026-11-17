@@ -29,8 +29,7 @@ const QUERY = {
   offset: "offset",
 } as const;
 
-/** "repeat" is the array style the API expects for multi-value keys. */
-const api = () => new URLBuilder(AS_API_DOMAIN, "repeat").addPath("api");
+const api = () => new URLBuilder(AS_API_DOMAIN).addPath("api");
 
 export const trendingUrl = (limit = 10): string =>
   api().addPath("trending").addPath("daily").addQuery(QUERY.limit, limit.toString()).build();

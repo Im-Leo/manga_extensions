@@ -1,24 +1,21 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
-export type QueryValue = string | number | boolean | string[] | object;
+export type QueryValue = string | number;
 
 /**
- * How a repeated value is encoded. AsuraScans' listing endpoints expect bare
- * repeated keys (`genres=a&genres=b`); its bookmark endpoints expect PHP-style
- * brackets (`ids[]=a&ids[]=b`).
+ * Builds a URL from path segments and query parameters, in the order added.
+ *
+ * Values are interpolated verbatim, so callers encode free text themselves. That is deliberate:
+ * AsuraScans' search sends a pre-encoded `%` wildcard that encoding again would break.
  */
-export type ArrayQueryStyle = "bracket" | "repeat";
-
-class URLBuilder {
+export class URLBuilder {
   private readonly baseUrl: string;
-  private readonly arrayStyle: ArrayQueryStyle;
-  private queryParams: Record<string, QueryValue> = {};
-  private pathSegments: string[] = [];
+  private readonly queryParams: [string, QueryValue][] = [];
+  private readonly pathSegments: string[] = [];
 
-  constructor(baseUrl: string, arrayStyle: ArrayQueryStyle = "bracket") {
+  constructor(baseUrl: string) {
     this.baseUrl = baseUrl.replace(/\/+$/, "");
-    this.arrayStyle = arrayStyle;
   }
 
   addPath(segment: string): this {
@@ -26,49 +23,15 @@ class URLBuilder {
     return this;
   }
 
+  /** An empty value means "unset", not an empty parameter. */
   addQuery(key: string, value: QueryValue): this {
-    this.queryParams[key] = value;
-    return this;
-  }
-
-  reset(): this {
-    this.queryParams = {};
-    this.pathSegments = [];
+    if (value !== "") this.queryParams.push([key, value]);
     return this;
   }
 
   build(): string {
     const path = this.pathSegments.length > 0 ? `/${this.pathSegments.join("/")}` : "";
-    const query = this.formatQuery();
-
+    const query = this.queryParams.map(([key, value]) => `${key}=${value}`).join("&");
     return query.length > 0 ? `${this.baseUrl}${path}?${query}` : `${this.baseUrl}${path}`;
   }
-
-  /** Values are interpolated verbatim; callers encode anything free-text themselves. */
-  private formatQuery(): string {
-    return Object.entries(this.queryParams)
-      .flatMap(([key, value]) => {
-        if (Array.isArray(value)) return this.formatArray(key, value);
-        if (typeof value === "object") return formatObject(key, value);
-
-        // An empty value means "unset", not an empty parameter.
-        return value === "" ? [] : [`${key}=${value}`];
-      })
-      .join("&");
-  }
-
-  private formatArray(key: string, values: string[]): string[] {
-    const suffix = this.arrayStyle === "repeat" ? "" : "[]";
-    return values.map((value) => `${key}${suffix}=${value}`);
-  }
 }
-
-function formatObject(key: string, value: object): string[] {
-  return Object.entries(value)
-    .map(([field, fieldValue]) =>
-      fieldValue !== undefined ? `${key}[${field}]=${fieldValue}` : undefined,
-    )
-    .filter((entry) => entry !== undefined);
-}
-
-export { URLBuilder };

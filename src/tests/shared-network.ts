@@ -49,21 +49,11 @@ export function registerSharedNetworkTests(suite: TestSuite): void {
     expect(new URLBuilder(BASE).build(), "no path, no query").to.equal(BASE);
   });
 
-  suite.test("URLBuilder: array style is per endpoint, objects skip undefined fields", async () => {
-    const bracket = new URLBuilder(BASE).addQuery("ids", ["a", "b"]).build();
-    const repeat = new URLBuilder(BASE, "repeat").addQuery("genres", ["a", "b"]).build();
-    const object = new URLBuilder(BASE)
-      .addQuery("order", { title: "asc", year: undefined })
-      .build();
-
-    expect(bracket).to.equal(`${BASE}?ids[]=a&ids[]=b`);
-    expect(repeat).to.equal(`${BASE}?genres=a&genres=b`);
-    expect(object).to.equal(`${BASE}?order[title]=asc`);
-  });
-
-  suite.test("URLBuilder: reset clears paths and query", async () => {
-    const builder = new URLBuilder(BASE).addPath("a").addQuery("q", 1);
-    expect(builder.reset().addPath("b").build()).to.equal(`${BASE}/b`);
+  suite.test("URLBuilder: keeps parameters in order and values as given", async () => {
+    const url = new URLBuilder(BASE).addQuery("search", "a%25b").addQuery("limit", 20).build();
+    expect(url, "a pre-encoded value is not encoded again").to.equal(
+      `${BASE}?search=a%25b&limit=20`,
+    );
   });
 
   suite.test("fetchText: success and 304 return the body, failures raise HttpError", async () => {
