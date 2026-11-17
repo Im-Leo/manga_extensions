@@ -63,6 +63,8 @@ export function parseListing(
   browsedGenre?: string,
 ): ListingEntry[] {
   const entries: ListingEntry[] = [];
+  // The carried list grows by a page of ids each page; a set keeps each check constant.
+  const seen = new Set(seenIds);
 
   const fromGenre = browsedGenre ? rateContent([browsedGenre]) : ContentRating.EVERYONE;
 
@@ -72,8 +74,9 @@ export function parseListing(
     const title = link.attr("title")?.trim() ?? "";
     const imageUrl = secureUrl($(layout.cover, element).attr("src") ?? "");
 
-    if (!mangaId || !title || !imageUrl || seenIds.includes(mangaId)) return;
+    if (!mangaId || !title || !imageUrl || seen.has(mangaId)) return;
 
+    seen.add(mangaId);
     seenIds.push(mangaId);
     entries.push({
       mangaId,
