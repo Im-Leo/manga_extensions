@@ -38,7 +38,6 @@ import type {
 } from "./models";
 import { NextDataClient, fetchSimpleSeries } from "./network";
 import {
-  applyAdvancedFilters,
   buildFilterOptions,
   chapterReference,
   enrichLatestWithBrowseData,
@@ -47,17 +46,14 @@ import {
   parseChapters,
   parseHomepageSection,
   parseSeriesDetail,
-  toSearchResultItem,
   toSortableList,
 } from "./parsers";
 import type FlameComicsConfig from "./pbconfig";
-import { randomSeed, seededShuffle } from "./search";
+import { searchCatalog } from "./search";
 
 const SECTION_POPULAR = "popular";
 const SECTION_LATEST = "latest";
 const SECTION_STAFF = "staff";
-
-const PAGE_SIZE = 100;
 
 /** Long enough to cover one screen's worth of calls, short enough that a refresh sees new chapters. */
 const PAGE_CACHE_TTL_MS = 60 * 1000;
@@ -71,16 +67,6 @@ interface Catalog {
   candidates: SortableListItem[];
   filters: FlameFilter;
 }
-
-type Comparator = (a: SortableListItem, b: SortableListItem) => number;
-
-const COMPARATORS: Record<string, Comparator> = {
-  latest: (a, b) => (b.updated ?? b.last_edit) - (a.updated ?? a.last_edit),
-  title_asc: (a, b) => a.title.localeCompare(b.title),
-  title_desc: (a, b) => b.title.localeCompare(a.title),
-  likes: (a, b) => (b.likes ?? 0) - (a.likes ?? 0),
-  year: (a, b) => (b.year ?? 0) - (a.year ?? 0),
-};
 
 export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsConfig> {
   private readonly rateLimiter = new BasicRateLimiter("rateLimiter", {
@@ -168,40 +154,8 @@ export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsCon
     metadata: Metadata | undefined,
     sortingOption: SortingOption,
   ): Promise<PagedResults<SearchResultItem>> {
-    const page = metadata?.page ?? 1;
-    const title = (searchQuery.title ?? "").trim().toLowerCase();
-    const { candidates: catalog, filters } = await this.loadCatalog();
-
-    // Copied: sorting below is in place, and the catalog is shared across searches.
-    let candidates = [...catalog];
-
-    if (title.length > 0) {
-      candidates = candidates.filter((c) => c.title.toLowerCase().includes(title));
-    }
-
-    // Filter before paginating, so pages stay dense and the next-page flag is honest.
-    if (searchQuery.metadata) {
-      candidates = applyAdvancedFilters(candidates, searchQuery.metadata, filters);
-    }
-
-    const seed = metadata?.seed ?? randomSeed();
-    if (sortingOption.id === "random") {
-      seededShuffle(candidates, seed);
-    } else {
-      const comparator = COMPARATORS[sortingOption.id];
-      if (comparator) candidates.sort(comparator);
-    }
-
-    const startIndex = (page - 1) * PAGE_SIZE;
-    const endIndex = startIndex + PAGE_SIZE;
-    const items = candidates
-      .slice(startIndex, endIndex)
-      .map((c) => toSearchResultItem(c, sortingOption));
-
-    return {
-      items,
-      metadata: endIndex < candidates.length ? { page: page + 1, seed } : undefined,
-    };
+    const { candidates, filters } = await this.loadCatalog();
+    return searchCatalog(candidates, filters, searchQuery, sortingOption, metadata);
   }
 
   async getAdvancedSearchForm(
