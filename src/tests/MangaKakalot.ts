@@ -64,6 +64,19 @@ const SOURCE_MANGA = {
 } as SourceManga;
 
 function registerOfflineTests(suite: TestSuite): void {
+  suite.test("requests: a title removed from the site says so", async () => {
+    const extension = new MangaKakalotExtension();
+
+    await withFakeNetwork(
+      [["/manga/removed-title", { status: 404, body: "<title>404</title>" }]],
+      async () => {
+        const error = await rejectionOf(extension.getMangaDetails("removed-title"));
+        expect(error.message).to.contain("no longer on kakamanga.com");
+        expect(error.message).to.contain("Migrate it");
+      },
+    );
+  });
+
   suite.test("urls: one builder per endpoint", async () => {
     expect(homeUrl()).to.equal(DOMAIN);
     expect(listingUrl("hot-manga", 2)).to.equal(`${DOMAIN}/manga-list/hot-manga?page=2`);

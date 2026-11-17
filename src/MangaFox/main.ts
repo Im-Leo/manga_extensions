@@ -23,7 +23,7 @@ import type { CheerioAPI } from "cheerio";
 
 import { TtlCache } from "../utils/cache";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor";
-import { HttpError, fetchCheerio } from "../utils/network";
+import { fetchCheerio, fetchTitlePage } from "../utils/network";
 import { MangaFoxAdvancedSearchForm } from "./forms/search";
 import { DOMAIN, GENRES, type Metadata, type SearchMetadata } from "./models";
 import {
@@ -173,7 +173,9 @@ export class MangaFoxExtension implements ExtensionImpl<typeof MangaFoxConfig> {
   }
 
   private detailPage(mangaId: string): Promise<CheerioAPI> {
-    return this.detailPages.get(mangaId, (id) => fetchTitlePage(id));
+    return this.detailPages.get(mangaId, (id) =>
+      fetchTitlePage(mangaUrl(id), "MangaFox", "fanfox.net"),
+    );
   }
 
   async getChapterDetails(chapter: Chapter): Promise<ChapterDetails> {
@@ -185,26 +187,6 @@ export class MangaFoxExtension implements ExtensionImpl<typeof MangaFoxConfig> {
     }
 
     return { id: chapter.chapterId, mangaId: chapter.sourceManga.mangaId, pages };
-  }
-}
-
-/**
- * The site answers a removed series with 404, typically after it is licensed.
- * That is reported in words the user can act on: the title will not come back
- * on this source, so it has to be migrated.
- */
-async function fetchTitlePage(mangaId: string): Promise<CheerioAPI> {
-  try {
-    return await fetchCheerio(mangaUrl(mangaId));
-  } catch (error) {
-    if (error instanceof HttpError && error.status === 404) {
-      throw new Error(
-        `MangaFox: this title is no longer on fanfox.net; it was removed or renamed. ` +
-          `Migrate it to another source.`,
-        { cause: error },
-      );
-    }
-    throw error;
   }
 }
 

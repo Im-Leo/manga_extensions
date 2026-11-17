@@ -23,7 +23,7 @@ import {
 import { TtlCache } from "../utils/cache";
 import { learnMissingRatings } from "../utils/content-rating";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor";
-import { fetchCheerio, fetchJSON } from "../utils/network";
+import { fetchCheerio, fetchJSON, fetchTitlePage } from "../utils/network";
 import { MangaKakalotAdvancedSearchForm } from "./forms/search";
 import {
   DISCOVER_SECTIONS,
@@ -155,7 +155,10 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
   }
 
   async getMangaDetails(mangaId: string): Promise<SourceManga> {
-    return parseMangaDetails(await fetchCheerio(mangaUrl(mangaId)), mangaId);
+    return parseMangaDetails(
+      await fetchTitlePage(mangaUrl(mangaId), "MangaKakalot", "kakamanga.com"),
+      mangaId,
+    );
   }
 
   async getChapters(sourceManga: SourceManga): Promise<Chapter[]> {

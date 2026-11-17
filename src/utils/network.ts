@@ -89,6 +89,30 @@ export async function fetchCheerio(input: RequestInput): Promise<CheerioAPI> {
   return cheerio.load(await fetchText(input));
 }
 
+/**
+ * A title page answering 404 means the site removed the series, typically after it was licensed.
+ * That is reported in words the user can act on: the title will not come back on this source, so
+ * it has to be migrated.
+ */
+export async function fetchTitlePage(
+  url: string,
+  source: string,
+  site: string,
+): Promise<CheerioAPI> {
+  try {
+    return await fetchCheerio(url);
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) {
+      throw new Error(
+        `${source}: this title is no longer on ${site}; it was removed or renamed. ` +
+          `Migrate it to another source.`,
+        { cause: error },
+      );
+    }
+    throw error;
+  }
+}
+
 export async function fetchJSON<T>(input: RequestInput): Promise<T> {
   const body = await fetchText(input);
 
