@@ -129,8 +129,13 @@ function registerOfflineTests(suite: TestSuite): void {
     );
   });
 
+  suite.test("parseMangaDetails: a payload without genres has no tags", async () => {
+    const details = parseMangaDetails(makeManga({ genres: undefined }));
+    expect(details.mangaInfo.tagGroups?.flatMap((group) => group.tags).length ?? 0).to.equal(0);
+  });
+
   suite.test("content rating: a payload without genres is not treated as safe", async () => {
-    const missing = makeManga({ genres: undefined as unknown as [] });
+    const missing = makeManga({ genres: undefined });
     expect(missing.genres, "fixture really omits genres").to.equal(undefined);
     expect(toSearchResultItem(missing).contentRating).to.equal(ContentRating.EVERYONE);
   });

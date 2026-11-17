@@ -53,7 +53,7 @@ export function unwrapSeries(body: AsuraSeriesResponse): AsuraManga {
 }
 
 export function parseMangaDetails(manga: AsuraManga): SourceManga {
-  const tags: Tag[] = manga.genres.map((genre) => ({ id: genre.slug, title: genre.name }));
+  const tags: Tag[] = (manga.genres ?? []).map((genre) => ({ id: genre.slug, title: genre.name }));
 
   return {
     mangaId: manga.slug,

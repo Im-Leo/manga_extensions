@@ -93,7 +93,8 @@ export interface AsuraManga {
   updated_at: string;
   public_url: string;
   source_url: string;
-  genres: AsuraGenre[];
+  /** Absent from some payloads. */
+  genres?: AsuraGenre[];
   latest_chapters: AsuraChapter[];
 }
 
