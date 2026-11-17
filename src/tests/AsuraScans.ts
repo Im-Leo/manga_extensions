@@ -97,7 +97,7 @@ function registerOfflineTests(suite: TestSuite): void {
     const info = manga.mangaInfo;
     expect(info.primaryTitle).to.equal("Example Series");
     expect(info.secondaryTitles).to.deep.equal(["Alt One"]);
-    expect(info.synopsis).to.equal("First line.\nSecond line.\n");
+    expect(info.synopsis).to.equal("First line.\n\nSecond & last\nline.");
     expect(info.tagGroups?.[0]?.tags).to.deep.equal([{ id: "action", title: "Action" }]);
     expect(info.additionalInfo?.["id"]).to.equal("42");
     expect(info.shareUrl).to.equal(`${AS_DOMAIN}/comics/example-series`);

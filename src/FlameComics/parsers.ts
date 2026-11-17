@@ -13,6 +13,7 @@ import type {
 } from "@paperback/types";
 
 import { rateContent } from "../utils/content-rating";
+import { htmlToPlainText } from "../utils/text";
 import type {
   ChapterDetail,
   ChapterReaderResponse,
@@ -43,17 +44,6 @@ const formatChapNum = (raw: string): string => {
   const n = Number.parseFloat(raw);
   return Number.isNaN(n) ? raw : String(n);
 };
-
-const extractTextFromHtml = (html: string): string =>
-  html
-    .replace(/<[^>]*>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ")
-    .trim();
 
 const getRelativeTime = (unixEpochSeconds: number): string => {
   const secondsAgo = Math.floor(Date.now() / 1000) - unixEpochSeconds;
@@ -241,7 +231,7 @@ export const parseSeriesDetail = (
     mangaId: seriesId,
     mangaInfo: {
       thumbnailUrl: cover,
-      synopsis: extractTextFromHtml(series.description ?? ""),
+      synopsis: htmlToPlainText(series.description ?? ""),
       primaryTitle: series.title,
       secondaryTitles: series.altTitles ?? [],
       contentRating: rateContent(seriesGenres(series)),

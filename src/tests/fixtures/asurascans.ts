@@ -33,7 +33,7 @@ export function makeManga(overrides: Partial<AsuraManga> = {}): AsuraManga {
     slug: "example-series",
     title: "Example Series",
     alt_titles: ["Alt One"],
-    description: "<p>First line.</p><p>Second line.</p>",
+    description: "<p>First line.</p><p>Second &amp; <em>last</em><br>line.</p>",
     cover: "https://cdn.asurascans.com/covers/fallback.webp",
     cover_url: "https://cdn.asurascans.com/covers/preferred.webp",
     status: "Ongoing",

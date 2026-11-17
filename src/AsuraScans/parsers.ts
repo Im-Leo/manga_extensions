@@ -11,6 +11,7 @@ import type {
 
 import { rateContent } from "../utils/content-rating";
 import { normalizeRating } from "../utils/rating";
+import { htmlToPlainText } from "../utils/text";
 import {
   AS_DOMAIN,
   type AsuraChapter,
@@ -120,7 +121,7 @@ export function parseMangaDetails(manga: AsuraManga): SourceManga {
       author: manga.author === "_" ? undefined : manga.author,
       artist: manga.artist === "_" ? undefined : manga.artist,
       tagGroups: [{ id: "0", title: "Genres", tags }],
-      synopsis: manga.description.replaceAll("<p>", "").replaceAll("</p>", "\n"),
+      synopsis: htmlToPlainText(manga.description),
       thumbnailUrl: manga.cover_url ?? manga.cover,
       contentRating: rateContent(genreNames(manga)),
       rating: normalizeRating(manga.rating, 10),

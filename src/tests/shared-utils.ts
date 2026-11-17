@@ -18,6 +18,7 @@ import {
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor.js";
 import { HttpError } from "../utils/network.js";
 import { normalizeRating } from "../utils/rating.js";
+import { htmlToPlainText } from "../utils/text.js";
 import { rejectionOf } from "./async.js";
 import type { TestSuite } from "./suite.js";
 
@@ -116,6 +117,13 @@ export function registerSharedUtilTests(suite: TestSuite): void {
     for (const genre of ["violence", "bloody", "suggestive", "romance", "school-life", "action"]) {
       expect(rateContent([genre]), `${genre} is safe`).to.equal(ContentRating.EVERYONE);
     }
+  });
+
+  suite.test("htmlToPlainText: keeps paragraphs, drops tags, decodes every entity", async () => {
+    const html =
+      "<p>First &amp; <strong>bold</strong>.</p><p>Second&#8217;s line<br>broken&nbsp;here</p>";
+    expect(htmlToPlainText(html)).to.equal("First & bold.\n\nSecond’s line\nbroken here");
+    expect(htmlToPlainText("  plain text  ")).to.equal("plain text");
   });
 
   suite.test("normalizeRating: scales to 0-1 and treats no score as none", async () => {
