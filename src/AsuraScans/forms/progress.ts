@@ -26,7 +26,7 @@ function toReadingStatus(value: string | undefined): AsuraScansReadingStatus {
  * Edits the reading progress AsuraScans stores against a bookmark.
  *
  * Nothing is written until Done: a title without a bookmark gets one on submit,
- * so opening the form and cancelling leaves the account untouched.
+ * so opening the form and canceling leaves the account untouched.
  */
 export class TrackingForm extends Form {
   override readonly requiresExplicitSubmission = true;
