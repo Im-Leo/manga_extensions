@@ -145,24 +145,41 @@ export function parseMangaDetails($: CheerioAPI, mangaId: string): SourceManga {
   };
 }
 
+/** `/manga/<mangaId>/[<volume>/]<chapter>/1.html`; the volume is "v01", "vTBD" or absent. */
+const CHAPTER_PATH = /\/manga\/[^/]+\/(?:(v[^/]+)\/)?(c[^/]+)\//;
+
+/**
+ * A chapter is identified by its chapter segment alone, which the site resolves without the
+ * volume and which every stored id already uses. Only where numbering restarts each volume, and
+ * that segment repeats, is the id qualified as "v01/c001" so each chapter stays reachable.
+ */
 export function parseChapters($: CheerioAPI, sourceManga: SourceManga): Chapter[] {
-  const chapters: Chapter[] = [];
+  const links = $("div#chapterlist ul li")
+    .children("a")
+    .toArray()
+    .flatMap((node) => {
+      const path = CHAPTER_PATH.exec($(node).attr("href")?.trim() ?? "");
+      if (!path?.[2]) return [];
+      return [{ volume: path[1], chapter: path[2], date: $("p.title2", node).text() }];
+    });
 
-  for (const node of $("div#chapterlist ul li").children("a").toArray()) {
-    const href = $(node).attr("href")?.trim() ?? "";
-    const chapterId = /\/manga\/[a-zA-Z0-9_]*\/(.*)\//.exec(href)?.[1]?.split("/").pop();
-    if (!chapterId) continue;
+  const occurrences = new Map<string, number>();
+  for (const { chapter } of links) occurrences.set(chapter, (occurrences.get(chapter) ?? 0) + 1);
 
-    const chapNum = Number(/c([0-9.]+)/.exec(chapterId)?.[1]);
+  const chapters = links.map(({ volume, chapter, date }): Chapter => {
+    const chapNum = Number(/c([0-9.]+)/.exec(chapter)?.[1]);
+    const volumeNumber = Number(volume?.slice(1));
+    const repeated = (occurrences.get(chapter) ?? 0) > 1;
 
-    chapters.push({
-      chapterId,
+    return {
+      chapterId: repeated && volume ? `${volume}/${chapter}` : chapter,
       sourceManga,
       langCode: "en",
       chapNum: Number.isNaN(chapNum) ? 0 : chapNum,
-      publishDate: parseChapterDate($("p.title2", node).text()),
-    });
-  }
+      volume: Number.isFinite(volumeNumber) && volumeNumber > 0 ? volumeNumber : undefined,
+      publishDate: parseChapterDate(date),
+    };
+  });
 
   return chapters.reverse();
 }

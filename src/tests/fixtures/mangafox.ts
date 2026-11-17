@@ -99,6 +99,17 @@ export const DATED_CHAPTER_LIST_HTML = `
   </ul></div>
 </body></html>`;
 
+/** Numbering that restarts each volume, under a manga id the site writes with a dot. */
+export const VOLUME_RESTART_CHAPTER_LIST_HTML = `
+<html><body>
+  <div id="chapterlist"><ul>
+    <li><a href="/manga/dr.stone_side/v02/c002/1.html"><p class="title2">1 day ago</p></a></li>
+    <li><a href="/manga/dr.stone_side/v02/c001/1.html"><p class="title2">2 days ago</p></a></li>
+    <li><a href="/manga/dr.stone_side/v01/c003/1.html"><p class="title2">3 days ago</p></a></li>
+    <li><a href="/manga/dr.stone_side/v01/c001/1.html"><p class="title2">4 days ago</p></a></li>
+  </ul></div>
+</body></html>`;
+
 export const CHAPTER_LIST_HTML = `
 <html><body>
   <div id="chapterlist"><ul>

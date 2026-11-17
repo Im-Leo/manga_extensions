@@ -30,6 +30,7 @@ import { withFakeNetwork } from "./fakes/application.js";
 import {
   CHAPTER_LIST_HTML,
   DATED_CHAPTER_LIST_HTML,
+  VOLUME_RESTART_CHAPTER_LIST_HTML,
   COMPACT_LISTING_HTML,
   DETAILED_LISTING_HTML,
   DETAIL_ADULT_HTML,
@@ -201,6 +202,21 @@ function registerOfflineTests(suite: TestSuite): void {
     expect(dates[0], "unparseable dates are omitted").to.equal(undefined);
     expect(dates[1]?.getTime()).to.equal(new Date(2026, 9, 16).getTime());
     expect(dates[2]?.getTime()).to.equal(new Date(2015, 8, 9).getTime());
+  });
+
+  suite.test("parseChapters: qualifies only ids a volume restart would repeat", async () => {
+    const chapters = parseChapters(cheerio.load(VOLUME_RESTART_CHAPTER_LIST_HTML), SOURCE_MANGA);
+
+    expect(chapters.map((chapter) => chapter.chapterId)).to.deep.equal([
+      "v01/c001",
+      "c003",
+      "v02/c001",
+      "c002",
+    ]);
+    expect(chapters.map((chapter) => chapter.volume)).to.deep.equal([1, 1, 2, 2]);
+    expect(chapterUrl("dr.stone_side", "v01/c001")).to.equal(
+      `${DOMAIN}/manga/dr.stone_side/v01/c001/1.html`,
+    );
   });
 
   suite.test("genres carousel emits metadata, not the 0.8 filters key", async () => {
