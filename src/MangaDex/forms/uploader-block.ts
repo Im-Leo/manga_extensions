@@ -10,7 +10,7 @@ import {
   type FormSectionElement,
 } from "@paperback/types";
 
-import { normalizeUuid } from "../legacy";
+import { normalizeUuid } from "../ids";
 import { getBlockedUploaders, setBlockedUploaders } from "../state";
 
 interface ParsedUploaderCsv {

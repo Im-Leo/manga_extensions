@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
-import { UUID_FRAGMENT } from "./legacy";
+import { UUID_FRAGMENT } from "./ids";
 
 export type SearchPrefix = "id" | "ch" | "grp" | "usr" | "author" | "list";
 

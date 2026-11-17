@@ -11,7 +11,8 @@ import type {
 } from "@paperback/types";
 
 import { MangaDexAdvancedSearchForm, type MangaDexSearchMetadata } from "./forms/search";
-import { normalizeUuid, resolveChapterId, resolveMangaId, UUID_SEARCH_RE } from "./legacy";
+import { normalizeUuid, UUID_SEARCH_RE } from "./ids";
+import { resolveChapterId, resolveMangaId } from "./legacy";
 import type { Metadata, SearchResponse } from "./models";
 import { fetchJSON } from "./network";
 import { dispatchSearch, type DispatchedSearch } from "./search-dispatch";
