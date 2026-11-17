@@ -58,7 +58,7 @@ import {
 const GENRES_TTL_MS = 6 * 60 * 60 * 1000;
 
 export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotConfig> {
-  private readonly rateLimiter = new BasicRateLimiter("ratelimiter", {
+  private readonly rateLimiter = new BasicRateLimiter("rateLimiter", {
     // Kept below what the site tolerates: this is the one Cloudflare-protected
     // source, and a re-triggered challenge fails it closed rather than slowing it.
     numberOfRequests: 8,
@@ -73,7 +73,7 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
     requireOk: true,
   });
 
-  /** Persists `cf_clearance` so a solved challenge survives an app restart. */
+  /** Persists the Cloudflare cookies, so a solved challenge survives an app restart. */
   private readonly cookieStorage = new CookieStorageInterceptor({ storage: "stateManager" });
 
   private readonly genres = new TtlCache<string, TagSection>(GENRES_TTL_MS, 1);

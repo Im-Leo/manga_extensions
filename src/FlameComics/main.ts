@@ -93,8 +93,8 @@ export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsCon
 
   async initialise(): Promise<void> {
     this.rateLimiter.registerInterceptor();
-    this.cookieStorage.registerInterceptor();
     this.interceptor.registerInterceptor();
+    this.cookieStorage.registerInterceptor();
   }
 
   async cloudflareBypassCompleted(

@@ -74,7 +74,7 @@ const PAGE_SIZE = 20;
 const CHAPTER_LIST_TTL_MS = 60 * 1000;
 
 export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
-  private readonly rateLimiter = new BasicRateLimiter("ratelimiter", {
+  private readonly rateLimiter = new BasicRateLimiter("rateLimiter", {
     numberOfRequests: 6,
     bufferInterval: 1,
     // Covers must not queue behind the request budget; this CDN needs no throttle.
