@@ -21,6 +21,7 @@ import {
   unwrapSeries,
 } from "../AsuraScans/parsers.js";
 import sourceInfo from "../AsuraScans/pbconfig.js";
+import { descramblePage } from "../AsuraScans/reader.js";
 import { PersistedTagCache, TAGS_TTL_MS, clearCachedTags } from "../AsuraScans/tags.js";
 import {
   chapterListUrl,
@@ -186,6 +187,15 @@ function registerOfflineTests(suite: TestSuite): void {
       ).to.equal(undefined);
     },
   );
+
+  suite.test("descramblePage: an unscrambled page is used as served", async () => {
+    await withFakeNetwork([], async (network) => {
+      expect(await descramblePage({ url: "https://cdn.example.com/1.webp" } as never)).to.equal(
+        "https://cdn.example.com/1.webp",
+      );
+      expect(network.requests, "no download for a plain page").to.have.lengthOf(0);
+    });
+  });
 
   suite.test("chapters: a title opening costs one chapter list request", async () => {
     const extension = new AsuraScansExtension();

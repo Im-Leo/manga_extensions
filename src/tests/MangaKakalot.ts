@@ -13,6 +13,7 @@ import * as cheerio from "cheerio";
 import { MangaKakalot, MangaKakalotExtension } from "../MangaKakalot/main.js";
 import { DOMAIN } from "../MangaKakalot/models.js";
 import {
+  applyLearnedRatings,
   isLastPage,
   parseChapterDetails,
   parseChapterList,
@@ -320,6 +321,24 @@ function registerOfflineTests(suite: TestSuite): void {
       (item) => item.mangaId === "alpha-title",
     );
     expect(after?.contentRating, "learned from the detail page").to.equal(ContentRating.EVERYONE);
+  });
+
+  suite.test("applyLearnedRatings: restamps manga tiles, leaves genre tiles alone", async () => {
+    const ratings = new ContentRatingCache();
+    ratings.remember("alpha-title", ContentRating.EVERYONE);
+    const genreTile: { name: string; contentRating?: ContentRating } = { name: "Action" };
+    const mangaTile: { mangaId: string; contentRating?: ContentRating } = {
+      mangaId: "alpha-title",
+      contentRating: ContentRating.MATURE,
+    };
+
+    const [manga, genre] = applyLearnedRatings<{ contentRating?: ContentRating }>(
+      [mangaTile, genreTile],
+      ratings,
+    );
+
+    expect(manga?.contentRating).to.equal(ContentRating.EVERYONE);
+    expect(genre, "passed through untouched").to.equal(genreTile);
   });
 
   suite.test("parseChapterDetails: collects pages and drops empty sources", async () => {

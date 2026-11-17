@@ -13,6 +13,7 @@ import {
   fetchResponse,
   fetchText,
   headerValue,
+  isSuccessStatus,
 } from "../utils/network.js";
 import { URLBuilder } from "../utils/url-builder/base.js";
 import { rejectionOf } from "./async.js";
@@ -54,6 +55,15 @@ export function registerSharedNetworkTests(suite: TestSuite): void {
     expect(url, "a pre-encoded value is not encoded again").to.equal(
       `${BASE}?search=a%25b&limit=20`,
     );
+  });
+
+  suite.test("isSuccessStatus: 2xx and a conditional 304 succeed", async () => {
+    for (const status of [200, 204, 299, 304]) {
+      expect(isSuccessStatus(status), String(status)).to.equal(true);
+    }
+    for (const status of [199, 301, 404, 500]) {
+      expect(isSuccessStatus(status), String(status)).to.equal(false);
+    }
   });
 
   suite.test("fetchText: success and 304 return the body, failures raise HttpError", async () => {
