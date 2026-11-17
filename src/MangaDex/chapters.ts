@@ -50,11 +50,7 @@ import {
   precomputeQuery,
 } from "./utils";
 
-export async function getChapters(
-  sourceManga: SourceManga,
-  sinceDate?: Date,
-  skipMetadataUpdate: boolean = false,
-): Promise<Chapter[]> {
+export async function getChapters(sourceManga: SourceManga, sinceDate?: Date): Promise<Chapter[]> {
   const mangaId = await resolveMangaId(sourceManga.mangaId);
   if (sourceManga.mangaId !== mangaId) {
     sourceManga.mangaId = mangaId;
@@ -67,7 +63,7 @@ export async function getChapters(
     sourceManga.mangaInfo.additionalInfo = {};
   }
 
-  const metadataUpdaterEnabled = !skipMetadataUpdate && getMetadataUpdater();
+  const metadataUpdaterEnabled = getMetadataUpdater();
   const needsFullRefresh =
     metadataUpdaterEnabled ||
     !sourceManga.mangaInfo.status ||

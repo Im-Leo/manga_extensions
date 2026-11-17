@@ -50,7 +50,7 @@ export function nextListingPage(
 }
 
 /** Genres ship on listing items as well as details, so tiles rate as accurately. */
-export function genreNames(manga: AsuraManga): string[] {
+function genreNames(manga: AsuraManga): string[] {
   return manga.genres?.map((genre) => genre.name) ?? [];
 }
 

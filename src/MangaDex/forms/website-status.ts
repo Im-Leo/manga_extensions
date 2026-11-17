@@ -28,23 +28,17 @@ function formatTimeSince(diffSec: number): string {
 }
 
 export class WebsiteStatusForm extends Form {
-  private statusData: { loading: boolean; content: string[] };
+  private statusLines: string[];
   // Only the newest fetch may write, so a slow load cannot overwrite a refresh.
   private fetchToken = 0;
 
   constructor() {
     super();
     if (cachedStatusContent && Date.now() - cachedStatusFetchedAt < STATUS_CACHE_TTL_MS) {
-      this.statusData = {
-        loading: false,
-        content: cachedStatusContent,
-      };
+      this.statusLines = cachedStatusContent;
       return;
     }
-    this.statusData = {
-      loading: true,
-      content: ["Loading..."],
-    };
+    this.statusLines = ["Loading..."];
     void this.fetchStatusInfo();
   }
 
@@ -59,7 +53,7 @@ export class WebsiteStatusForm extends Form {
       Section(
         {
           id: "status_info",
-          footer: this.statusData.content.join("\n"),
+          footer: this.statusLines.join("\n"),
         },
         [],
       ),
@@ -67,10 +61,7 @@ export class WebsiteStatusForm extends Form {
   }
 
   async handleRefreshStatus(): Promise<void> {
-    this.statusData = {
-      loading: true,
-      content: ["Loading..."],
-    };
+    this.statusLines = ["Loading..."];
     this.reloadForm();
     await this.fetchStatusInfo();
   }
@@ -80,7 +71,7 @@ export class WebsiteStatusForm extends Form {
     const isCurrent = (): boolean => this.fetchToken === token;
     const showError = (message: string): void => {
       if (!isCurrent()) return;
-      this.statusData = { loading: false, content: [message] };
+      this.statusLines = [message];
       this.reloadForm();
     };
 
@@ -271,16 +262,10 @@ export class WebsiteStatusForm extends Form {
       const finalContent = content.length ? content : ["No status data"];
       cachedStatusContent = finalContent;
       cachedStatusFetchedAt = Date.now();
-      this.statusData = {
-        loading: false,
-        content: finalContent,
-      };
+      this.statusLines = finalContent;
     } catch {
       if (!isCurrent()) return;
-      this.statusData = {
-        loading: false,
-        content: ["Error fetching status"],
-      };
+      this.statusLines = ["Error fetching status"];
     }
 
     this.reloadForm();

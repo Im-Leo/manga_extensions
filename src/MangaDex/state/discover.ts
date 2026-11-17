@@ -66,24 +66,20 @@ export function setDiscoverSectionOrder(order: string[]): void {
 }
 
 export const getPopularEnabled = (): boolean => getKey(SETTING_KEYS.popularEnabled, true);
-export const setPopularEnabled = (v: boolean): void => setKey(SETTING_KEYS.popularEnabled, v);
+const setPopularEnabled = (v: boolean): void => setKey(SETTING_KEYS.popularEnabled, v);
 export const getLatestUpdatesEnabled = (): boolean =>
   getKey(SETTING_KEYS.latestUpdatesEnabled, true);
-export const setLatestUpdatesEnabled = (v: boolean): void =>
-  setKey(SETTING_KEYS.latestUpdatesEnabled, v);
+const setLatestUpdatesEnabled = (v: boolean): void => setKey(SETTING_KEYS.latestUpdatesEnabled, v);
 export const getRecommendedEnabled = (): boolean => getKey(SETTING_KEYS.recommendedEnabled, true);
-export const setRecommendedEnabled = (v: boolean): void =>
-  setKey(SETTING_KEYS.recommendedEnabled, v);
+const setRecommendedEnabled = (v: boolean): void => setKey(SETTING_KEYS.recommendedEnabled, v);
 export const getSelfPublishedEnabled = (): boolean =>
   getKey(SETTING_KEYS.selfPublishedEnabled, true);
-export const setSelfPublishedEnabled = (v: boolean): void =>
-  setKey(SETTING_KEYS.selfPublishedEnabled, v);
+const setSelfPublishedEnabled = (v: boolean): void => setKey(SETTING_KEYS.selfPublishedEnabled, v);
 export const getSeasonalEnabled = (): boolean => getKey(SETTING_KEYS.seasonalEnabled, true);
-export const setSeasonalEnabled = (v: boolean): void => setKey(SETTING_KEYS.seasonalEnabled, v);
+const setSeasonalEnabled = (v: boolean): void => setKey(SETTING_KEYS.seasonalEnabled, v);
 export const getRecentlyAddedEnabled = (): boolean =>
   getKey(SETTING_KEYS.recentlyAddedEnabled, true);
-export const setRecentlyAddedEnabled = (v: boolean): void =>
-  setKey(SETTING_KEYS.recentlyAddedEnabled, v);
+const setRecentlyAddedEnabled = (v: boolean): void => setKey(SETTING_KEYS.recentlyAddedEnabled, v);
 
 export interface DiscoverSectionDefinition {
   id: string;

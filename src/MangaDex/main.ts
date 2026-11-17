@@ -13,12 +13,7 @@ import { getDiscoverSectionItems, getDiscoverSections } from "./discover";
 import { getMangaDetails } from "./manga";
 import { MangaDexInterceptor } from "./network";
 import type MangaDexConfig from "./pbconfig";
-import {
-  getAdvancedSearchForm,
-  getSearchResults,
-  getSearchTags,
-  getSortingOptions,
-} from "./search";
+import { getAdvancedSearchForm, getSearchResults, getSortingOptions } from "./search";
 import { getSettingsForm } from "./settings";
 import { runStateMigrations } from "./state";
 import { processTitlesForUpdates } from "./updates";
@@ -43,7 +38,6 @@ export class MangaDexExtension implements ExtensionImpl<typeof MangaDexConfig> {
   getManagedCollectionItems = getManagedCollectionItems;
   applyManagedCollectionChanges = applyManagedCollectionChanges;
   getSettingsForm = getSettingsForm;
-  getSearchTags = getSearchTags;
   getAdvancedSearchForm = getAdvancedSearchForm;
   getSearchResults = getSearchResults;
   getSortingOptions = getSortingOptions;

@@ -63,7 +63,7 @@ const SYNTH_BACKOFF_MAX_MS = 60 * 60 * 1000;
 let synthRetryAt = 0;
 let synthBackoffMs = SYNTH_BACKOFF_START_MS;
 
-export function getCachedTags(): TagCache | null {
+function getCachedTags(): TagCache | null {
   const raw = Application.getState(TAG_CACHE_KEY);
   if (
     !raw ||
@@ -98,7 +98,7 @@ export function getCachedTags(): TagCache | null {
   return cache;
 }
 
-export function setCachedTags(cache: TagCache): void {
+function setCachedTags(cache: TagCache): void {
   Application.setState(cache, TAG_CACHE_KEY);
 }
 
@@ -108,7 +108,7 @@ export function resetTagCache(): void {
   synthBackoffMs = SYNTH_BACKOFF_START_MS;
 }
 
-export async function fetchTags(): Promise<TagCache> {
+async function fetchTags(): Promise<TagCache> {
   const response = await fetchJSON<RawTagListResponse>({
     url: buildTagListUrl(),
     method: "GET",
@@ -133,7 +133,7 @@ export async function fetchTags(): Promise<TagCache> {
 
 const startFetch = singleFlight(fetchTags);
 
-export async function ensureTags(): Promise<TagCache> {
+async function ensureTags(): Promise<TagCache> {
   const cache = getCachedTags();
   if (!cache) {
     if (inFlightColdStart === null) {
@@ -179,7 +179,7 @@ export function forceRefreshTags(): Promise<TagCache> {
   return startFetch();
 }
 
-export const formatTagGroupName = (group: string): string =>
+const formatTagGroupName = (group: string): string =>
   group.charAt(0).toUpperCase() + group.slice(1).replace(/_/g, " ");
 
 export async function getSearchTagSections(enabledRatings?: string[]): Promise<TagSection[]> {

@@ -143,7 +143,7 @@ async function postToAuthEndpoint(payload: string): Promise<AuthResponse> {
   return json;
 }
 
-export function authEndpointRequest(payload: string): Promise<AuthResponse> {
+function authEndpointRequest(payload: string): Promise<AuthResponse> {
   const inFlight = authRequestCache[payload];
   if (inFlight) return inFlight;
 

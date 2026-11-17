@@ -64,7 +64,7 @@ export async function searchByUploader(
       return { items, metadata: nextMetadata && { ...nextMetadata, shownMangaIds: shown } };
     }
 
-    offset = nextMetadata.offset ?? offset + MANGA_PAGE_LIMIT;
+    offset += MANGA_PAGE_LIMIT;
   }
 
   return { items: [], metadata: { offset, shownMangaIds: shown } };

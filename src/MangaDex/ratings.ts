@@ -12,7 +12,7 @@ import { RATINGS } from "./lookups";
  * one-to-many and every consumer has to treat it as a set of candidates.
  */
 
-export const contentRatingMap: Record<string, ContentRating> = Object.fromEntries(
+const contentRatingMap: Record<string, ContentRating> = Object.fromEntries(
   RATINGS.map((r) => [r.enum, r.paperback]),
 );
 

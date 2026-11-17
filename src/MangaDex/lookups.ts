@@ -81,7 +81,7 @@ export interface ImageQuality {
   default?: string[];
 }
 
-export const IMAGE_QUALITIES: readonly ImageQuality[] = [
+const IMAGE_QUALITIES: readonly ImageQuality[] = [
   {
     name: "Source (Original/Best)",
     enum: "source",
