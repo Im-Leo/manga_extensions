@@ -220,7 +220,7 @@ function registerOfflineTests(suite: TestSuite): void {
     expect(info.secondaryTitles).to.deep.equal(["Second Name", "Third Name"]);
     expect(info.author).to.equal("Some Author");
     expect(info.status).to.equal("Completed");
-    expect(info.rating).to.be.closeTo(1.7, 0.001);
+    expect(info.rating, "4.25 out of 5").to.be.closeTo(0.85, 1e-9);
     expect(info.synopsis).to.equal("A real synopsis follows.");
     expect(info.shareUrl).to.equal(`${DOMAIN}/manga/detailed-title`);
   });

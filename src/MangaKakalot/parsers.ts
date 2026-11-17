@@ -17,6 +17,7 @@ import type { Cheerio, CheerioAPI } from "cheerio";
 import type { Element } from "domhandler";
 
 import { ContentRatingCache, rateContent } from "../utils/content-rating";
+import { normalizeRating } from "../utils/rating";
 import { DOMAIN, LANGUAGE, type ApiChapter, type ChapterListResponse } from "./models";
 
 /**
@@ -71,9 +72,9 @@ export function parseMangaDetails($: CheerioAPI, mangaId: string): SourceManga {
       .trim(),
   );
 
-  // Rendered as "rate : 4.3" on a 0-10 scale; Paperback expects 0-5.
-  const ratingText = $("#rate_row_cmd").text().trim();
-  const rating = ((Number(ratingText.match(/rate\s*:\s*([\d.]+)/)?.[1]) || 0) / 10) * 2;
+  // Rendered as "4.25 / 5 - 92 votes"; the scale is read rather than assumed.
+  const score = /([\d.]+)\s*\/\s*(\d+)/.exec($("#rate_row_cmd").text());
+  const rating = normalizeRating(Number(score?.[1]), Number(score?.[2]));
 
   const status = $("li:contains(Status)", DETAIL_ROOT)
     .text()

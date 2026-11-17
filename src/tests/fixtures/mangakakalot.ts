@@ -81,7 +81,7 @@ export const DETAIL_HTML = `
       <li>Status : Completed</li>
       <li class="genres"><a href="/genre/action">Action</a><a href="/genre/smut">Smut</a></li>
     </ul>
-    <div id="rate_row_cmd">rate : 8.5 / 10</div>
+    <em id="rate_row_cmd"> 4.25 / 5 - 92 votes</em>
     <div id="contentBox">You are reading Detailed Title online, bookmark. A real synopsis follows.</div>
   </div>
 </body></html>`;
@@ -95,7 +95,7 @@ export const DETAIL_SAFE_HTML = `
       <li>Status : Ongoing</li>
       <li class="genres"><a href="/genre/comedy">Comedy</a></li>
     </ul>
-    <div id="rate_row_cmd">rate : 5 / 10</div>
+    <em id="rate_row_cmd"> 5.00 / 5 - 3 votes</em>
     <div id="contentBox">A safe synopsis.</div>
   </div>
 </body></html>`;
