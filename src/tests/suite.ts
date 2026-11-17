@@ -91,6 +91,7 @@ export class TestSuite {
       const skippedLogger = tests.scope(skipped.name);
       skippedLogger.log("status", "skip");
       skippedLogger.log("reason", skipped.reason);
+      skippedLogger.log("duration", 0);
     }
 
     const totalDuration = Date.now() - startTime;
@@ -161,7 +162,7 @@ export const registerDefaultTests = function (
       );
     } else {
       throw new Error(
-        `extension does not implement 'SearchResultsProviding' but has the 'SEARCH_RESULTS_PROVIDING' capability`,
+        `extension does not implement 'SearchResultsProviding' but has the 'SEARCH_RESULT_PROVIDING' capability`,
       );
     }
   }
@@ -325,7 +326,7 @@ export const registerDefaultChapterProvidingSourceTests = function (
           params = [chapters[0]];
         } else {
           throw new Error(
-            "No `sourceManga` provided in test data. Unable to infer from `MangaProviding.getMangaDetails`",
+            "No `chapter` provided in test data. Unable to infer from `ChapterProviding.getChapters`",
           );
         }
       }
