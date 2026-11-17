@@ -28,6 +28,7 @@ import {
   homeUrl,
   listingUrl,
   mangaUrl,
+  searchTitle,
   searchUrl,
 } from "../MangaKakalot/urls.js";
 import { UNRATED_LISTING_DEFAULT } from "../utils/content-rating.js";
@@ -83,6 +84,15 @@ function registerOfflineTests(suite: TestSuite): void {
       `${DOMAIN}/genre/action?page=2`,
     );
     expect(searchUrl({ title: "" }, 1)).to.equal(`${DOMAIN}/manga-list/latest-manga?page=1`);
+  });
+
+  suite.test("urls: a title with nothing searchable falls back to browsing", async () => {
+    for (const title of ["   ", "...", "'s"]) {
+      expect(searchTitle({ title }), title).to.equal("");
+      expect(searchUrl({ title, metadata: { genres: ["action"] } }, 1), title).to.equal(
+        `${DOMAIN}/genre/action?page=1`,
+      );
+    }
   });
 
   suite.test("parseDiscoverSectionItems: maps every entry and honors section type", async () => {

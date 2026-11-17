@@ -45,7 +45,15 @@ import {
   ratingCache,
 } from "./parsers";
 import type MangaKakalotConfig from "./pbconfig";
-import { chapterListUrl, chapterUrl, homeUrl, listingUrl, mangaUrl, searchUrl } from "./urls";
+import {
+  chapterListUrl,
+  chapterUrl,
+  homeUrl,
+  listingUrl,
+  mangaUrl,
+  searchTitle,
+  searchUrl,
+} from "./urls";
 
 /** The genre list changes rarely; reading it costs the whole homepage. */
 const GENRES_TTL_MS = 6 * 60 * 60 * 1000;
@@ -124,7 +132,7 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
 
     return {
       items: await this.withRealRatings(
-        parseSearchResults($, Boolean(query.title), query.metadata?.genres?.[0]),
+        parseSearchResults($, searchTitle(query).length > 0, query.metadata?.genres?.[0]),
       ),
       metadata: isLastPage($) ? undefined : { page: page + 1 },
     };

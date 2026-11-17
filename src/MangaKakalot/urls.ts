@@ -34,12 +34,13 @@ export function chapterUrl(mangaId: string, chapterId: string): string {
  */
 export function searchUrl(query: SearchQuery<SearchMetadata>, page: number): string {
   const url = new URL(DOMAIN);
+  const title = searchTitle(query);
   const genre = query.metadata?.genres?.[0];
 
-  if (query.title) {
+  if (title) {
     url.addPathComponent("search");
     url.addPathComponent("story");
-    url.addPathComponent(encodeURIComponent(sanitizeQuery(query.title)));
+    url.addPathComponent(encodeURIComponent(title));
   } else if (genre) {
     url.addPathComponent("genre");
     url.addPathComponent(genre);
@@ -52,11 +53,14 @@ export function searchUrl(query: SearchQuery<SearchMetadata>, page: number): str
   return url.toString();
 }
 
-/** Apostrophes and dots break the search path; quotes are rejected outright. */
-function sanitizeQuery(title: string): string {
-  return title
+/**
+ * The title as the search path accepts it, or "" when nothing searchable remains. Apostrophes and
+ * the fragment after them, and dots, break the path; quotes are rejected outright.
+ */
+export function searchTitle(query: SearchQuery<SearchMetadata>): string {
+  return (query.title ?? "")
     .replace(/'[^ ]*/g, "")
     .replace(/\.+/g, "")
-    .replace(/["']/g, "")
+    .replace(/"/g, "")
     .trim();
 }
