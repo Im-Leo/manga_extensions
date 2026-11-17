@@ -40,7 +40,7 @@ The password is sent once to sign in and is never stored; the session is kept in
 storage.
 
 Reading progress for a title is edited from its tracking form and saved when you tap **Done**.
-Cancelling leaves your bookmarks untouched.
+Canceling leaves your bookmarks untouched.
 
 ## Troubleshooting
 

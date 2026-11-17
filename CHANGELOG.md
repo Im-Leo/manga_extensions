@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 2026-11-16
 
 ### Security
@@ -66,7 +68,6 @@
 - MangaFox 1.2.0: a paginated chapter whose page failed to load opened with that page silently
   missing. Each page is retried, and a page that still fails now fails the chapter so the reader
   offers a retry. Pages from plainly served chapters are upgraded to https like covers.
-
 - AsuraScans 1.1.1: opening a title or refreshing the library failed for some series. The series
   endpoint answers `{ series }` from its cache and `{ data: { series } }` on a cache miss; both
   shapes are now accepted.
