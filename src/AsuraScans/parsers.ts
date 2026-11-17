@@ -1,7 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
-import type { Chapter, SearchResultItem, SourceManga, Tag } from "@paperback/types";
+import type {
+  Chapter,
+  DiscoverSectionItem,
+  SearchResultItem,
+  SourceManga,
+  Tag,
+} from "@paperback/types";
 
 import { rateContent } from "../utils/content-rating";
 import { normalizeRating } from "../utils/rating";
@@ -50,6 +56,40 @@ export function genreNames(manga: AsuraManga): string[] {
 export function toSearchResultItem(manga: AsuraManga): SearchResultItem {
   return {
     mangaId: manga.slug,
+    title: manga.title,
+    imageUrl: manga.cover_url ?? manga.cover,
+    subtitle: latestChapterSubtitle(manga),
+    contentRating: rateContent(genreNames(manga)),
+  };
+}
+
+export function toFeaturedItem(manga: AsuraManga): DiscoverSectionItem {
+  return {
+    type: "featuredCarouselItem",
+    mangaId: manga.slug,
+    title: manga.title,
+    imageUrl: manga.cover_url ?? manga.cover,
+    contentRating: rateContent(genreNames(manga)),
+  };
+}
+
+export function toCarouselItem(manga: AsuraManga): DiscoverSectionItem {
+  return {
+    type: "simpleCarouselItem",
+    mangaId: manga.slug,
+    title: manga.title,
+    imageUrl: manga.cover_url ?? manga.cover,
+    subtitle: latestChapterSubtitle(manga),
+    contentRating: rateContent(genreNames(manga)),
+  };
+}
+
+/** Opens the latest chapter; "" when a newly added series has none yet. */
+export function toChapterUpdateItem(manga: AsuraManga): DiscoverSectionItem {
+  return {
+    type: "chapterUpdatesCarouselItem",
+    mangaId: manga.slug,
+    chapterId: manga.latest_chapters?.[0]?.id.toString() ?? "",
     title: manga.title,
     imageUrl: manga.cover_url ?? manga.cover,
     subtitle: latestChapterSubtitle(manga),

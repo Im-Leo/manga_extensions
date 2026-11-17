@@ -23,7 +23,6 @@ import {
 } from "@paperback/types";
 
 import { TtlCache } from "../utils/cache";
-import { rateContent } from "../utils/content-rating";
 import { SiteInterceptor } from "../utils/interceptor";
 import { fetchJSON } from "../utils/network";
 import { TrackingForm } from "./forms/progress";
@@ -44,12 +43,13 @@ import {
   type SearchMetadata,
 } from "./models";
 import {
-  genreNames,
-  latestChapterSubtitle,
   nextListingPage,
   parseChapters,
   parseMangaDetails,
   readerPages,
+  toCarouselItem,
+  toChapterUpdateItem,
+  toFeaturedItem,
   toSearchResultItem,
   unwrapSeries,
 } from "./parsers";
@@ -130,35 +130,15 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
     if (section.type === DiscoverSectionType.featured) {
       const trending = await fetchJSON<AsuraSearchResult>(trendingUrl());
 
-      return {
-        items: (trending.data ?? []).map((manga) => ({
-          type: "featuredCarouselItem" as const,
-          mangaId: manga.slug,
-          title: manga.title,
-          imageUrl: manga.cover_url ?? manga.cover,
-          contentRating: rateContent(genreNames(manga)),
-        })),
-      };
+      return { items: (trending.data ?? []).map(toFeaturedItem) };
     }
 
     const sort = section.type === DiscoverSectionType.chapterUpdates ? "latest" : "popular";
     const listing = await fetchJSON<AsuraSearchResult>(listingUrl(sort, offset, PAGE_SIZE));
 
-    const items = (listing.data ?? []).map((manga): DiscoverSectionItem => {
-      const item: DiscoverSectionItem = {
-        type: "simpleCarouselItem",
-        mangaId: manga.slug,
-        title: manga.title,
-        imageUrl: manga.cover_url ?? manga.cover,
-        subtitle: latestChapterSubtitle(manga),
-        contentRating: rateContent(genreNames(manga)),
-      };
-      if (section.type !== DiscoverSectionType.chapterUpdates) return item;
-      return Object.assign(item, {
-        type: "chapterUpdatesCarouselItem",
-        chapterId: manga.latest_chapters?.[0]?.id.toString() ?? "",
-      });
-    });
+    const toItem =
+      section.type === DiscoverSectionType.chapterUpdates ? toChapterUpdateItem : toCarouselItem;
+    const items = (listing.data ?? []).map(toItem);
 
     return { items, metadata: nextListingPage(listing, offset) };
   }
