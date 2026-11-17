@@ -3,6 +3,7 @@
 
 import type { TagSection } from "@paperback/types";
 
+import { singleFlight } from "../utils/cache";
 import { RATINGS } from "./lookups";
 import { fetchJSON } from "./network";
 import { buildTagListUrl } from "./urls";
@@ -53,9 +54,7 @@ export const SYNTHETIC_RATING_ID_TO_NAME: Readonly<Record<string, string>> = Obj
 /** Fewer than this means a truncated response, not a shrunken vocabulary. */
 const MIN_FETCHED_TAG_ENTRIES = 40;
 
-let inFlightFetch: Promise<TagCache> | null = null;
-
-/** Separate from {@link inFlightFetch}: a cold start has no cache to fall back on. */
+/** Separate from the shared refresh: a cold start has no cache to fall back on. */
 let inFlightColdStart: Promise<TagCache> | null = null;
 
 const SYNTH_BACKOFF_START_MS = 60 * 1000;
@@ -132,17 +131,7 @@ export async function fetchTags(): Promise<TagCache> {
   return cache;
 }
 
-function startFetch(): Promise<TagCache> {
-  if (inFlightFetch !== null) return inFlightFetch;
-  const promise = fetchTags();
-  inFlightFetch = promise;
-  promise
-    .finally(() => {
-      if (inFlightFetch === promise) inFlightFetch = null;
-    })
-    .catch(() => {});
-  return promise;
-}
+const startFetch = singleFlight(fetchTags);
 
 export async function ensureTags(): Promise<TagCache> {
   const cache = getCachedTags();

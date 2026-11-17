@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
+import { singleFlight } from "../utils/cache";
 import type { CustomListResponse } from "./models";
 import { fetchJSON } from "./network";
 import { filterMangaRelationships } from "./relationships";
@@ -158,8 +159,6 @@ function hasAnyMatch(ids: Partial<CuratedListIds>): boolean {
   );
 }
 
-let inFlightFetch: Promise<Partial<CuratedListIds>> | null = null;
-
 async function fetchAndDiscover(): Promise<Partial<CuratedListIds>> {
   const response = await fetchJSON<UserListsResponse>({
     url: buildUserListsUrl(MANGADEX_ADMIN_USER_ID, USER_LISTS_FETCH_LIMIT).toString(),
@@ -174,17 +173,7 @@ async function fetchAndDiscover(): Promise<Partial<CuratedListIds>> {
   return ids;
 }
 
-function startFetch(): Promise<Partial<CuratedListIds>> {
-  if (inFlightFetch !== null) return inFlightFetch;
-  const promise = fetchAndDiscover();
-  inFlightFetch = promise;
-  promise
-    .finally(() => {
-      if (inFlightFetch === promise) inFlightFetch = null;
-    })
-    .catch(() => {});
-  return promise;
-}
+const startFetch = singleFlight(fetchAndDiscover);
 
 export async function fetchCustomListMangaIds(listId: string): Promise<string[] | null> {
   const json = await fetchJSON<CustomListResponse>({
