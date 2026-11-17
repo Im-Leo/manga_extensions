@@ -5,7 +5,7 @@ How to build, test and release these extensions. For how the code is organized a
 
 ## Setup
 
-Requires Node 24, matching CI.
+Requires Node 24 (`.nvmrc`, and `engines` in `package.json`), matching CI.
 
 ```
 npm ci                 install the toolchain
