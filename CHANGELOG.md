@@ -32,6 +32,9 @@
 - CI: a release branch deploys only after conformance and the offline suite pass on that commit.
   Workflow actions are pinned to commit SHAs, kept current by Dependabot, and jobs that do not
   publish run with read-only access.
+- MangaDex 1.1.2: library sync uses Paperback's redesigned collection API. Reading statuses are
+  mutually exclusive, a change that fails is reported on its own instead of failing the whole sync,
+  and loading several collections costs one status request instead of one per collection.
 - MangaDex 1.1.1: request errors name the source. Restoring default settings is driven by one list
   of every setting, so none can be left out.
 
