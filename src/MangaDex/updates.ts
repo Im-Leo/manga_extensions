@@ -33,26 +33,29 @@ export async function processTitlesForUpdates(
   updateManager: UpdateManager,
   _lastUpdateDate?: Date,
 ): Promise<void> {
-  const sourceManga = updateManager.getQueuedItems();
+  const queued = updateManager.getQueuedItems();
+  const idMap = await resolveMangaIds(queued.map((m) => m.mangaId));
 
-  const idMap = await resolveMangaIds(sourceManga.map((m) => m.mangaId));
-
+  // The app tracks a title by the id it queued, which for an old library entry is a legacy
+  // numeric id; requests use the resolved UUID, and answers go back under the queued id.
+  const queuedIdOf = new Map<string, string>();
   const mangaMap = new Map<string, SourceManga>();
   const mangaIds: string[] = [];
-  const skipped: string[] = [];
-  for (const manga of sourceManga) {
+  const unresolved: string[] = [];
+  for (const manga of queued) {
     const resolved = idMap[manga.mangaId];
     if (!resolved) {
-      skipped.push(manga.mangaId);
+      unresolved.push(manga.mangaId);
       continue;
     }
-    if (manga.mangaId !== resolved) manga.mangaId = resolved;
-    mangaIds.push(manga.mangaId);
-    mangaMap.set(manga.mangaId, manga);
+    queuedIdOf.set(resolved, manga.mangaId);
+    mangaIds.push(resolved);
+    mangaMap.set(resolved, manga);
   }
-  if (skipped.length > 0) {
-    await Promise.all(skipped.map((mangaId) => updateManager.setNewChapters(mangaId, [])));
-  }
+
+  const skip = (ids: string[]) =>
+    Promise.all(ids.map((id) => updateManager.setNewChapters(queuedIdOf.get(id) ?? id, [])));
+  await skip(unresolved);
 
   const optimizeUpdates = getOptimizeUpdates();
 
@@ -151,7 +154,7 @@ export async function processTitlesForUpdates(
         idsToSkip.push(...missingIds);
       }
 
-      await Promise.all(idsToSkip.map((mangaId) => updateManager.setNewChapters(mangaId, [])));
+      await skip(idsToSkip);
     }
   }
 }

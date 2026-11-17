@@ -46,6 +46,7 @@ import {
   shouldSkipByCount,
 } from "../MangaDex/utils.js";
 import { registerMangaDexCollectionTests } from "./mangadex-collections.js";
+import { registerMangaDexUpdateTests } from "./mangadex-updates.js";
 import { TestSuite, registerSourceTests } from "./suite.js";
 
 function relationship(type: RelationshipType, fileName?: string): Relationship {
@@ -405,6 +406,7 @@ export async function runTests(logger: TestLogger) {
   registerHelperTests(suite);
   registerContractTests(suite);
   registerMangaDexCollectionTests(suite);
+  registerMangaDexUpdateTests(suite);
 
   registerSourceTests(suite, MangaDex, sourceInfo, {
     mangaProviding: { getMangaDetails: [LIVE_MANGA_ID] },
