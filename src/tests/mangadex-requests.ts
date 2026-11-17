@@ -124,6 +124,16 @@ export function registerMangaDexRequestTests(suite: TestSuite): void {
     );
   });
 
+  suite.test("details: a title opening fetches its details once", async () => {
+    const id = "55555555-5555-4555-8555-555555555555";
+    await withFakeNetwork(DETAIL_ROUTES(id, "ongoing"), async (network) => {
+      const [first, second] = await Promise.all([getMangaDetails(id), getMangaDetails(id)]);
+
+      expect(network.count(`/manga/${id}?`)).to.equal(1);
+      expect(first.mangaInfo, "each caller may change its own copy").to.not.equal(second.mangaInfo);
+    });
+  });
+
   suite.test("details: the chapter aggregate is requested only for completed titles", async () => {
     const ongoing = "66666666-6666-4666-8666-666666666666";
     const completed = "77777777-7777-4777-8777-777777777777";

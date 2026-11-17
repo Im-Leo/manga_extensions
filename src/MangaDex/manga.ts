@@ -3,6 +3,7 @@
 
 import type { SourceManga } from "@paperback/types";
 
+import { TtlCache } from "../utils/cache";
 import { resolveMangaId } from "./legacy";
 import type {
   AggregateResponse,
@@ -22,9 +23,20 @@ import {
 } from "./urls";
 import { isNotFoundError } from "./utils";
 
-export async function getMangaDetails(mangaId: string): Promise<SourceManga> {
-  const resolvedId = await resolveMangaId(mangaId);
+/**
+ * A title opening asks for details and then chapters, and with Auto-Update Metadata on the chapter
+ * read fetches details again; the cache gives both one set of requests.
+ */
+const DETAILS_TTL_MS = 30 * 1000;
+const detailsCache = new TtlCache<string, SourceManga>(DETAILS_TTL_MS, 8);
 
+export async function getMangaDetails(mangaId: string): Promise<SourceManga> {
+  const details = await detailsCache.get(await resolveMangaId(mangaId), fetchMangaDetails);
+  // Callers merge into mangaInfo, so each gets its own rather than the cached object.
+  return { ...details, mangaInfo: { ...details.mangaInfo } };
+}
+
+async function fetchMangaDetails(resolvedId: string): Promise<SourceManga> {
   const detailsRequest = {
     url: buildMangaByIdUrl(resolvedId, ["author", "artist", "cover_art"]).toString(),
     method: "GET",
