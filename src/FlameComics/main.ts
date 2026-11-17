@@ -40,6 +40,7 @@ import { NextDataClient, fetchSimpleSeries } from "./network";
 import {
   applyAdvancedFilters,
   buildFilterOptions,
+  chapterReference,
   enrichLatestWithBrowseData,
   isNovel,
   parseChapterDetails,
@@ -233,15 +234,7 @@ export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsCon
   }
 
   async getChapterDetails(chapter: Chapter): Promise<ChapterDetails> {
-    // Chapters carry "<series_id>:<token>"; entries from before that packing fall
-    // back to additionalInfo.
-    const [seriesIdPart, tokenPart] = chapter.chapterId.split(":");
-    const seriesId = seriesIdPart ?? chapter.sourceManga?.mangaId;
-    const token =
-      tokenPart ??
-      (typeof chapter.additionalInfo?.["token"] === "string"
-        ? chapter.additionalInfo["token"]
-        : undefined);
+    const { seriesId, token } = chapterReference(chapter);
 
     if (!seriesId || !token) {
       throw new Error(

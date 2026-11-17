@@ -279,6 +279,27 @@ export const parseChapters = (
   });
 };
 
+/**
+ * Chapters carry "<series_id>:<token>". Ids from before that packing carry neither half, so the
+ * series comes from the chapter's manga and the token from additionalInfo.
+ */
+export const chapterReference = (
+  chapter: Chapter,
+): { seriesId: string | undefined; token: string | undefined } => {
+  const separator = chapter.chapterId.indexOf(":");
+  if (separator !== -1) {
+    return {
+      seriesId: chapter.chapterId.slice(0, separator),
+      token: chapter.chapterId.slice(separator + 1),
+    };
+  }
+  const token = chapter.additionalInfo?.["token"];
+  return {
+    seriesId: chapter.sourceManga?.mangaId,
+    token: typeof token === "string" ? token : undefined,
+  };
+};
+
 export const parseChapterDetails = (
   chapterId: string,
   response: ChapterReaderResponse,

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
-import { ContentRating, type SourceManga, type TestLogger } from "@paperback/types";
+import { ContentRating, type Chapter, type SourceManga, type TestLogger } from "@paperback/types";
 import { expect } from "chai";
 
 import { FlameComics } from "../FlameComics/main.js";
@@ -9,6 +9,7 @@ import { CDN } from "../FlameComics/models.js";
 import {
   applyAdvancedFilters,
   buildFilterOptions,
+  chapterReference,
   enrichLatestWithBrowseData,
   isNovel,
   parseChapterDetails,
@@ -60,6 +61,21 @@ function rate(series: Parameters<typeof toSortableList>[0][number]) {
 }
 
 function registerOfflineTests(suite: TestSuite): void {
+  suite.test("chapterReference: splits packed ids and falls back for older ones", async () => {
+    const packed = { chapterId: "12:tok", sourceManga: SOURCE_MANGA } as Chapter;
+    expect(chapterReference(packed)).to.deep.equal({ seriesId: "12", token: "tok" });
+
+    const legacy = {
+      chapterId: "131",
+      sourceManga: SOURCE_MANGA,
+      additionalInfo: { token: "tok131" },
+    } as unknown as Chapter;
+    expect(chapterReference(legacy)).to.deep.equal({ seriesId: "1", token: "tok131" });
+
+    const bare = { chapterId: "1", sourceManga: SOURCE_MANGA } as Chapter;
+    expect(chapterReference(bare)).to.deep.equal({ seriesId: "1", token: undefined });
+  });
+
   suite.test("applyAdvancedFilters: single-value fields match names with spaces", async () => {
     const korean = {
       ...toSortableList([makeSeries({ series_id: 1 })], SIMPLE_SERIES)[0]!,
