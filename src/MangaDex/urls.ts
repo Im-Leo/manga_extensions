@@ -193,6 +193,7 @@ export interface LatestChaptersUrlOptions {
   ratings: readonly string[];
   uploaders?: readonly string[];
   excludedUploaders?: readonly string[];
+  excludedGroups?: readonly string[];
   includes?: readonly string[];
 }
 
@@ -207,6 +208,7 @@ export function buildLatestChaptersUrl(opts: LatestChaptersUrlOptions): URL {
     .setQueryItem(QUERY.includeFutureUpdates, "0");
   setIfNonEmpty(url, QUERY.uploader, opts.uploaders);
   setIfNonEmpty(url, QUERY.excludedUploaders, opts.excludedUploaders);
+  setIfNonEmpty(url, QUERY.excludedGroups, opts.excludedGroups);
   setIfNonEmpty(url, QUERY.includes, opts.includes);
   return url;
 }

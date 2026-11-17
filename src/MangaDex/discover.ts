@@ -16,6 +16,7 @@ import { collectUniqueMangaIdsFromChapters } from "./relationships";
 import {
   DISCOVER_SECTIONS,
   SECTION_DEFINITIONS,
+  getActiveBlockedGroupIds,
   getBlockedUploaders,
   getDiscoverSectionOrder,
   getDiscoverThumbnail,
@@ -252,6 +253,7 @@ async function getLatestUpdatesItems(
   const ratings: string[] = getRatings();
   const languages: string[] = getLanguages();
   const excludedUploaders = getBlockedUploaders();
+  const excludedGroups = getActiveBlockedGroupIds();
 
   const chaptersResponse = await fetchJSON<ChapterResponse>({
     url: buildLatestChaptersUrl({
@@ -260,6 +262,7 @@ async function getLatestUpdatesItems(
       languages,
       ratings,
       excludedUploaders,
+      excludedGroups,
     }).toString(),
     method: "GET",
   });

@@ -17,6 +17,9 @@ export function getBlockedGroups(): Record<string, ScanlationGroupItem> {
 
 export const saveBlockedGroups = (v: Record<string, ScanlationGroupItem>): void =>
   setKey(SETTING_KEYS.blockedGroups, v);
+/** The blocked group ids to exclude from requests; none while group blocking is off. */
+export const getActiveBlockedGroupIds = (): string[] =>
+  getGroupBlockingEnabled() ? Object.keys(getBlockedGroups()) : [];
 export const getGroupBlockingEnabled = (): boolean =>
   getKey(SETTING_KEYS.groupBlockingEnabled, false);
 export const setGroupBlockingEnabled = (v: boolean): void =>
