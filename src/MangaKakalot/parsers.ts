@@ -359,5 +359,5 @@ function hasMangaId(item: unknown): item is { mangaId: string } {
   );
 }
 
-/** The cache behind {@link applyLearnedRatings}; passed to `learnMissingRatings`. */
+/** The cache behind {@link applyLearnedRatings}; filled by the extension's `RatingResolver`. */
 export const ratingCache = ratings;

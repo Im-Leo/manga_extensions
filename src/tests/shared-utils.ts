@@ -11,8 +11,8 @@ import { expect } from "chai";
 
 import {
   ContentRatingCache,
+  RatingResolver,
   UNRATED_LISTING_DEFAULT,
-  learnMissingRatings,
   rateContent,
 } from "../utils/content-rating.js";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor.js";
@@ -136,7 +136,7 @@ export function registerSharedUtilTests(suite: TestSuite): void {
     );
   });
 
-  suite.test("learnMissingRatings: never exceeds its concurrency cap", async () => {
+  suite.test("RatingResolver: never exceeds its concurrency cap", async () => {
     const cache = new ContentRatingCache();
     const ids = Array.from({ length: 20 }, (_, i) => `id-${i}`);
 
@@ -145,8 +145,7 @@ export function registerSharedUtilTests(suite: TestSuite): void {
     // leaving the pool looking unbounded.
     let inFlight = 0;
     let peak = 0;
-    await learnMissingRatings(
-      ids,
+    const resolver = new RatingResolver(
       cache,
       async (mangaId) => {
         inFlight++;
@@ -158,20 +157,36 @@ export function registerSharedUtilTests(suite: TestSuite): void {
       },
       4,
     );
+    // Two listings at once, as on launch: they share the one cap.
+    await Promise.all([resolver.resolve(ids.slice(0, 12)), resolver.resolve(ids.slice(8))]);
 
     expect(peak, "at most 4 requests outstanding").to.be.at.most(4);
     expect(cache.knows("id-19"), "every title still resolved").to.equal(true);
   });
 
-  suite.test("learnMissingRatings: fetches only what the cache lacks", async () => {
+  suite.test("RatingResolver: overlapping calls fetch a title once", async () => {
+    const cache = new ContentRatingCache();
+    const fetched: string[] = [];
+    const resolver = new RatingResolver(cache, async (mangaId) => {
+      fetched.push(mangaId);
+      await Promise.resolve();
+      cache.remember(mangaId, ContentRating.MATURE);
+    });
+
+    await Promise.all([resolver.resolve(["a", "shared"]), resolver.resolve(["shared", "b"])]);
+
+    expect([...fetched].sort()).to.deep.equal(["a", "b", "shared"]);
+  });
+
+  suite.test("RatingResolver: fetches only what the cache lacks", async () => {
     const cache = new ContentRatingCache();
     cache.remember("known", ContentRating.EVERYONE);
 
     const fetched: string[] = [];
-    await learnMissingRatings(["known", "unknown-a", "unknown-b"], cache, async (mangaId) => {
+    await new RatingResolver(cache, async (mangaId) => {
       fetched.push(mangaId);
       cache.remember(mangaId, ContentRating.ADULT);
-    });
+    }).resolve(["known", "unknown-a", "unknown-b"]);
 
     expect(fetched.sort(), "an already-known title is not refetched").to.deep.equal([
       "unknown-a",
@@ -180,25 +195,25 @@ export function registerSharedUtilTests(suite: TestSuite): void {
     expect(cache.recall("unknown-a")).to.equal(ContentRating.ADULT);
   });
 
-  suite.test("learnMissingRatings: de-duplicates and skips empty ids", async () => {
+  suite.test("RatingResolver: de-duplicates and skips empty ids", async () => {
     const cache = new ContentRatingCache();
     let calls = 0;
 
-    await learnMissingRatings(["dup", "dup", "dup", ""], cache, async (mangaId) => {
+    await new RatingResolver(cache, async (mangaId) => {
       calls++;
       cache.remember(mangaId, ContentRating.MATURE);
-    });
+    }).resolve(["dup", "dup", "dup", ""]);
 
     expect(calls, "one request per distinct title").to.equal(1);
   });
 
-  suite.test("learnMissingRatings: one failure does not sink the batch", async () => {
+  suite.test("RatingResolver: one failure does not sink the batch", async () => {
     const cache = new ContentRatingCache();
 
-    await learnMissingRatings(["good", "bad"], cache, async (mangaId) => {
+    await new RatingResolver(cache, async (mangaId) => {
       if (mangaId === "bad") throw new Error("404");
       cache.remember(mangaId, ContentRating.ADULT);
-    });
+    }).resolve(["good", "bad"]);
 
     expect(cache.recall("good"), "the readable title resolved").to.equal(ContentRating.ADULT);
     expect(cache.recall("bad"), "the failed one keeps the default").to.equal(

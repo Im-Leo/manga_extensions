@@ -199,34 +199,55 @@ const RESOLUTION_CONCURRENCY = 8;
 /**
  * Resolves the rating of every tile the cache cannot already answer for.
  *
- * `learn` reads one title's detail page — normally the source's
- * `getMangaDetails`, whose parser fills the cache as a side effect.
+ * `learn` reads one title's detail page — normally the source's `getMangaDetails`, whose parser
+ * fills the cache as a side effect. Owned by the extension instance, so calls made together, such
+ * as every discover section on launch, share one lookup per title and one concurrency cap.
  */
-export async function learnMissingRatings(
-  mangaIds: readonly string[],
-  cache: ContentRatingCache,
-  learn: (mangaId: string) => Promise<unknown>,
-  concurrency: number = RESOLUTION_CONCURRENCY,
-): Promise<void> {
-  const unknown = [...new Set(mangaIds)].filter((id) => id !== "" && !cache.knows(id));
+export class RatingResolver {
+  private readonly inFlight = new Map<string, Promise<void>>();
+  private readonly waiting: (() => void)[] = [];
+  private active = 0;
 
-  let next = 0;
-  const worker = async (): Promise<void> => {
-    while (next < unknown.length) {
-      const id = unknown[next++];
-      if (id === undefined) return;
+  constructor(
+    private readonly cache: ContentRatingCache,
+    private readonly learn: (mangaId: string) => Promise<unknown>,
+    private readonly concurrency: number = RESOLUTION_CONCURRENCY,
+  ) {}
 
+  async resolve(mangaIds: readonly string[]): Promise<void> {
+    const unknown = [...new Set(mangaIds)].filter((id) => id !== "" && !this.cache.knows(id));
+    await Promise.all(unknown.map((id) => this.inFlight.get(id) ?? this.start(id)));
+    this.cache.flush();
+  }
+
+  private start(mangaId: string): Promise<void> {
+    const lookup = (async () => {
+      await this.acquire();
       try {
-        await learn(id);
+        await this.learn(mangaId);
       } catch {
         // One unreadable title keeps the default rather than emptying the grid.
+      } finally {
+        this.release();
+        this.inFlight.delete(mangaId);
       }
+    })();
+    this.inFlight.set(mangaId, lookup);
+    return lookup;
+  }
+
+  private async acquire(): Promise<void> {
+    if (this.active < this.concurrency) {
+      this.active++;
+      return;
     }
-  };
+    await new Promise<void>((resume) => this.waiting.push(resume));
+  }
 
-  await Promise.all(
-    Array.from({ length: Math.max(1, Math.min(concurrency, unknown.length)) }, worker),
-  );
-
-  cache.flush();
+  /** Hands the slot straight to the next waiter, so a newcomer cannot slip in and pass the cap. */
+  private release(): void {
+    const next = this.waiting.shift();
+    if (next) next();
+    else this.active--;
+  }
 }

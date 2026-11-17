@@ -21,7 +21,7 @@ import {
 } from "@paperback/types";
 
 import { TtlCache } from "../utils/cache";
-import { learnMissingRatings } from "../utils/content-rating";
+import { RatingResolver } from "../utils/content-rating";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor";
 import { fetchCheerio, fetchJSON, fetchTitlePage } from "../utils/network";
 import { MangaKakalotAdvancedSearchForm } from "./forms/search";
@@ -78,6 +78,10 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
   private readonly cookieStorage = new CookieStorageInterceptor({ storage: "stateManager" });
 
   private readonly genres = new TtlCache<string, TagSection>(GENRES_TTL_MS, 1);
+
+  private readonly ratingResolver = new RatingResolver(ratingCache, (mangaId) =>
+    this.getMangaDetails(mangaId),
+  );
 
   async initialise(): Promise<void> {
     this.rateLimiter.registerInterceptor();
@@ -147,9 +151,7 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
   private async withRealRatings<T extends { contentRating?: ContentRating }>(
     items: T[],
   ): Promise<T[]> {
-    await learnMissingRatings(ratableIds(items), ratingCache, (mangaId) =>
-      this.getMangaDetails(mangaId),
-    );
+    await this.ratingResolver.resolve(ratableIds(items));
 
     return applyLearnedRatings(items);
   }
