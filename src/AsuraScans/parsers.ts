@@ -149,13 +149,3 @@ export function readerPages(response: AsuraReaderResponse, signedIn: boolean): P
 
   throw new Error(`AsuraScans: chapter ${chapter.number} is early access. ${when} ${access}`);
 }
-
-export function toCreatorTags(names: string[]): Tag[] {
-  return [
-    { id: "all", title: "All" },
-    ...names.map((name) => ({
-      id: name.toLowerCase().replace(/\s/g, "-").replace(/[',]/g, ""),
-      title: name,
-    })),
-  ];
-}

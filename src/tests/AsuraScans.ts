@@ -25,7 +25,6 @@ import { PersistedTagCache, TAGS_TTL_MS, clearCachedTags } from "../AsuraScans/t
 import {
   chapterListUrl,
   chapterUrl,
-  creatorsUrl,
   genresUrl,
   listingUrl,
   searchUrl,
@@ -162,7 +161,6 @@ function registerOfflineTests(suite: TestSuite): void {
     expect(trendingUrl()).to.contain("/api/trending/daily");
     expect(trendingUrl(), "carousel size is capped").to.contain("limit=10");
     expect(genresUrl()).to.equal(`${AS_API_DOMAIN}/api/genres`);
-    expect(creatorsUrl()).to.equal(`${AS_API_DOMAIN}/api/creators`);
     expect(seriesUrl("example-series")).to.equal(`${AS_API_DOMAIN}/api/series/example-series`);
     expect(chapterListUrl("example-series")).to.equal(
       `${AS_API_DOMAIN}/api/series/example-series/chapters`,
@@ -188,6 +186,21 @@ function registerOfflineTests(suite: TestSuite): void {
       ).to.equal(undefined);
     },
   );
+
+  suite.test("search form: loading its filters costs one genre request", async () => {
+    clearCachedTags();
+    const extension = new AsuraScansExtension();
+    const genres = { body: { data: [{ id: 1, slug: "action", name: "Action" }] } };
+
+    try {
+      await withFakeNetwork([["/api/genres", genres]], async (network) => {
+        await extension.getAdvancedSearchForm({ title: "" });
+        expect(network.requests.map((request) => request.url)).to.deep.equal([genresUrl()]);
+      });
+    } finally {
+      clearCachedTags();
+    }
+  });
 
   suite.test("discover: carousel tiles prefer cover_url, like search", async () => {
     const extension = new AsuraScansExtension();

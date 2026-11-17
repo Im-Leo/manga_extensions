@@ -37,8 +37,6 @@ export const trendingUrl = (limit = 10): string =>
 
 export const genresUrl = (): string => api().addPath("genres").build();
 
-export const creatorsUrl = (): string => api().addPath("creators").build();
-
 export const seriesUrl = (mangaId: string): string =>
   api().addPath(PATH.series).addPath(mangaId).build();
 

@@ -35,7 +35,6 @@ import {
   statuses,
   types,
   type AsuraChapterResponse,
-  type AsuraCreatorRequest,
   type AsuraGenre,
   type AsuraSeriesResponse,
   type AsuraPaging,
@@ -50,7 +49,6 @@ import {
   parseChapters,
   parseMangaDetails,
   readerPages,
-  toCreatorTags,
   toSearchResultItem,
   unwrapSeries,
 } from "./parsers";
@@ -62,7 +60,6 @@ import { getMangaProgress, processChapterReadActionQueue } from "./tracking";
 import {
   chapterListUrl,
   chapterUrl,
-  creatorsUrl,
   genresUrl,
   listingUrl,
   searchUrl,
@@ -157,15 +154,9 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
     return { items, metadata: nextListingPage(listing, offset) };
   }
 
-  async getSearchTags(): Promise<TagSection[]> {
-    return this.tags.get();
-  }
-
+  /** The filters the search form and the genre, status and type sections offer. */
   private async fetchTagSections(): Promise<TagSection[]> {
-    const [genres, creators] = await Promise.all([
-      fetchJSON<{ data: AsuraGenre[] }>(genresUrl()),
-      fetchJSON<{ data: AsuraCreatorRequest }>(creatorsUrl()),
-    ]);
+    const genres = await fetchJSON<{ data: AsuraGenre[] }>(genresUrl());
 
     return [
       {
@@ -175,20 +166,13 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
       },
       { id: TagSectionId.SeriesStatus, title: "Status", tags: statuses },
       { id: TagSectionId.SeriesType, title: "Type", tags: types },
-      { id: "min_chapters", title: "Minimum Chapters", tags: [] },
-      { id: "artist", title: "Artist", tags: toCreatorTags(creators.data.artists) },
-      { id: "author", title: "Author", tags: toCreatorTags(creators.data.authors) },
     ];
-  }
-
-  async supportsTagExclusion(): Promise<boolean> {
-    return false;
   }
 
   async getAdvancedSearchForm(
     searchQuery: SearchQuery<SearchMetadata>,
   ): Promise<AdvancedSearchForm> {
-    return new AsuraScansAdvancedSearchForm(searchQuery, await this.getSearchTags());
+    return new AsuraScansAdvancedSearchForm(searchQuery, await this.tags.get());
   }
 
   async getSortingOptions(_query: SearchQuery<SearchMetadata>): Promise<SortingOption[]> {
@@ -267,7 +251,7 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
   private async getGenreSectionItems(
     sectionId: string,
   ): Promise<PagedResults<DiscoverSectionItem>> {
-    const tags = await this.getSearchTags();
+    const tags = await this.tags.get();
 
     const sectionToTag: Record<string, [TagSectionId, keyof SearchMetadata]> = {
       genres: [TagSectionId.Genres, "genres"],

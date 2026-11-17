@@ -109,11 +109,6 @@ export interface AsuraGenre {
   slug: string;
 }
 
-export interface AsuraCreatorRequest {
-  authors: string[];
-  artists: string[];
-}
-
 export interface SearchMetadata extends JSONObject {
   genres?: string[];
   seriesStatus?: string[];

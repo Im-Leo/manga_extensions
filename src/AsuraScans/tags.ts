@@ -8,9 +8,9 @@ import { singleFlight } from "../utils/cache";
 /**
  * Search tags persisted across launches.
  *
- * Building them costs the genre and creator lists, and three discover sections
- * plus the search form all read them, so they are cached. The cache expires so
- * that genres and creators added on the site eventually appear.
+ * Building them costs the genre list, and three discover sections plus the
+ * search form all read them, so they are cached. The cache expires so that
+ * genres added on the site eventually appear.
  */
 
 const TAGS_KEY = "tags";
