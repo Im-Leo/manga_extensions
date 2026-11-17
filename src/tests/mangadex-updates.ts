@@ -6,12 +6,18 @@ import { expect } from "chai";
 
 import { LATEST_CHAPTER_INFO_KEY, Status } from "../MangaDex/models.js";
 import { resetAllSettings } from "../MangaDex/state/reset.js";
-import { setOptimizeUpdates } from "../MangaDex/state/updates.js";
+import {
+  setOptimizeUpdates,
+  setSkipPublicationStatus,
+  setSkipUnreadChapters,
+} from "../MangaDex/state/updates.js";
 import { processTitlesForUpdates } from "../MangaDex/updates.js";
 import { withFakeNetwork } from "./fakes/application.js";
 import type { TestSuite } from "./suite.js";
 
 const ALPHA = "11111111-1111-4111-8111-111111111111";
+const BETA = "22222222-2222-4222-8222-222222222222";
+const GAMMA = "33333333-3333-4333-8333-333333333333";
 const LEGACY_ID = "48213";
 
 interface StoredTitle {
@@ -49,6 +55,27 @@ function updateManager(queued: SourceManga[]): { manager: UpdateManager; skipped
 
 /** The library-update flow: which titles are skipped, and under which id. */
 export function registerMangaDexUpdateTests(suite: TestSuite): void {
+  suite.test("updates: skip filters apply with Optimized Updates off", async () => {
+    resetAllSettings();
+    try {
+      setOptimizeUpdates(false);
+      setSkipUnreadChapters(1);
+      setSkipPublicationStatus([Status.Completed]);
+      const { manager, skipped } = updateManager([
+        stored({ mangaId: ALPHA, status: Status.Ongoing, unread: 3 }),
+        stored({ mangaId: BETA, status: Status.Ongoing }),
+        stored({ mangaId: GAMMA, status: Status.Completed }),
+      ]);
+
+      // No routes: with batching off, filtering needs nothing but stored state.
+      await withFakeNetwork([], () => processTitlesForUpdates(manager));
+
+      expect([...skipped].sort()).to.deep.equal([ALPHA, GAMMA].sort());
+    } finally {
+      resetAllSettings();
+    }
+  });
+
   suite.test("updates: a legacy id is skipped under the id the app queued", async () => {
     resetAllSettings();
     try {

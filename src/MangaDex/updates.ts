@@ -40,7 +40,6 @@ export async function processTitlesForUpdates(
   // numeric id; requests use the resolved UUID, and answers go back under the queued id.
   const queuedIdOf = new Map<string, string>();
   const mangaMap = new Map<string, SourceManga>();
-  const mangaIds: string[] = [];
   const unresolved: string[] = [];
   for (const manga of queued) {
     const resolved = idMap[manga.mangaId];
@@ -49,7 +48,6 @@ export async function processTitlesForUpdates(
       continue;
     }
     queuedIdOf.set(resolved, manga.mangaId);
-    mangaIds.push(resolved);
     mangaMap.set(resolved, manga);
   }
 
@@ -58,103 +56,104 @@ export async function processTitlesForUpdates(
   await skip(unresolved);
 
   const optimizeUpdates = getOptimizeUpdates();
+  const skipPublicationStatus = getSkipPublicationStatus();
+  const skipNewChapters = getSkipNewChapters();
+  const skipUnreadChapters = getSkipUnreadChapters();
 
-  if (optimizeUpdates) {
-    const ratings: string[] = getRatings();
-    const languages: string[] = getLanguages();
-    const skipPublicationStatus = getSkipPublicationStatus();
-    const batchSize = getUpdateBatchSize();
-    const skipNewChapters = getSkipNewChapters();
-    const skipUnreadChapters = getSkipUnreadChapters();
+  const filteredOut = (manga: SourceManga, status: string | undefined): boolean =>
+    (status !== undefined && skipPublicationStatus.includes(status)) ||
+    shouldSkipByCount(skipUnreadChapters, manga.unreadChapterCount, manga.chapterCount) ||
+    shouldSkipByCount(skipNewChapters, manga.newChapterCount, manga.chapterCount);
 
-    for (let i = 0; i < mangaIds.length; i += batchSize) {
-      const batchIds = mangaIds.slice(i, i + batchSize);
-      const idsToSkip: string[] = [];
+  // The filters need only what the app stored, so they apply whether or not updates are batched.
+  // Batching reads the fresher status from the API instead, below.
+  const candidates: string[] = [];
+  const filtered: string[] = [];
+  for (const [mangaId, manga] of mangaMap) {
+    const storedStatus = optimizeUpdates ? undefined : manga.mangaInfo?.status;
+    (filteredOut(manga, storedStatus) ? filtered : candidates).push(mangaId);
+  }
+  await skip(filtered);
 
-      const request = {
-        url: buildMangaListUrl({
-          limit: batchSize,
-          languages,
-          ratings,
-          ids: batchIds,
-          includes: [],
-        }).toString(),
-        method: "GET",
-      };
+  if (!optimizeUpdates) return;
 
-      let json: SearchResponse;
-      try {
-        json = await fetchJSON<SearchResponse>(request);
-      } catch {
-        continue;
-      }
+  const ratings: string[] = getRatings();
+  const languages: string[] = getLanguages();
+  const batchSize = getUpdateBatchSize();
 
-      const seenIds = new Set<string>();
-      if (Array.isArray(json.data)) {
-        for (const mangaData of json.data) {
-          if (!mangaData || !mangaData.attributes) continue;
-          const apiId = mangaData.id.toLowerCase();
-          seenIds.add(apiId);
-          const storedManga = mangaMap.get(apiId);
-          if (!storedManga) continue;
+  for (let i = 0; i < candidates.length; i += batchSize) {
+    const batchIds = candidates.slice(i, i + batchSize);
+    const idsToSkip: string[] = [];
 
-          const latestApiChapter = mangaData.attributes.latestUploadedChapter;
-          const latestStoredChapter =
-            storedManga.mangaInfo?.additionalInfo?.[LATEST_CHAPTER_INFO_KEY];
-          const chapterChanged = (latestApiChapter ?? null) !== (latestStoredChapter ?? null);
+    const request = {
+      url: buildMangaListUrl({
+        limit: batchSize,
+        languages,
+        ratings,
+        ids: batchIds,
+        includes: [],
+      }).toString(),
+      method: "GET",
+    };
 
-          const skipUnread = shouldSkipByCount(
-            skipUnreadChapters,
-            storedManga.unreadChapterCount,
-            storedManga.chapterCount,
-          );
-          const skipNew = shouldSkipByCount(
-            skipNewChapters,
-            storedManga.newChapterCount,
-            storedManga.chapterCount,
-          );
-          const effectiveStatus = reconcileStoredCompletedStatus(
-            mangaData.attributes.status,
-            storedManga.mangaInfo?.status,
-          );
-          const filterSkip =
-            skipPublicationStatus.includes(effectiveStatus) || skipUnread || skipNew;
+    let json: SearchResponse;
+    try {
+      json = await fetchJSON<SearchResponse>(request);
+    } catch {
+      continue;
+    }
 
-          if (!chapterChanged || filterSkip) {
-            idsToSkip.push(apiId);
-          }
+    const seenIds = new Set<string>();
+    if (Array.isArray(json.data)) {
+      for (const mangaData of json.data) {
+        if (!mangaData || !mangaData.attributes) continue;
+        const apiId = mangaData.id.toLowerCase();
+        seenIds.add(apiId);
+        const storedManga = mangaMap.get(apiId);
+        if (!storedManga) continue;
+
+        const latestApiChapter = mangaData.attributes.latestUploadedChapter;
+        const latestStoredChapter =
+          storedManga.mangaInfo?.additionalInfo?.[LATEST_CHAPTER_INFO_KEY];
+        const chapterChanged = (latestApiChapter ?? null) !== (latestStoredChapter ?? null);
+        const effectiveStatus = reconcileStoredCompletedStatus(
+          mangaData.attributes.status,
+          storedManga.mangaInfo?.status,
+        );
+
+        if (!chapterChanged || filteredOut(storedManga, effectiveStatus)) {
+          idsToSkip.push(apiId);
         }
       }
+    }
 
-      const missingIds = batchIds.filter((id) => !seenIds.has(id));
-      const VERIFY_MISSING_THRESHOLD = 10;
-      if (missingIds.length > 0 && missingIds.length <= VERIFY_MISSING_THRESHOLD) {
-        const verifyResults = await Promise.allSettled(
-          missingIds.map((mangaId) => fetchLatestUploadedChapter(mangaId)),
-        );
-        for (const [k, result] of verifyResults.entries()) {
-          const mangaId = missingIds[k];
-          if (!mangaId) continue;
+    const missingIds = batchIds.filter((id) => !seenIds.has(id));
+    const VERIFY_MISSING_THRESHOLD = 10;
+    if (missingIds.length > 0 && missingIds.length <= VERIFY_MISSING_THRESHOLD) {
+      const verifyResults = await Promise.allSettled(
+        missingIds.map((mangaId) => fetchLatestUploadedChapter(mangaId)),
+      );
+      for (const [k, result] of verifyResults.entries()) {
+        const mangaId = missingIds[k];
+        if (!mangaId) continue;
 
-          if (result.status === "fulfilled") {
-            const stored = mangaMap.get(mangaId);
-            const latestStored =
-              stored?.mangaInfo?.additionalInfo?.[LATEST_CHAPTER_INFO_KEY] ?? null;
-            if (result.value === null || result.value === latestStored) {
-              idsToSkip.push(mangaId);
-            }
-            continue;
-          }
-
-          if (isNotFoundError(result.reason)) {
+        if (result.status === "fulfilled") {
+          const stored = mangaMap.get(mangaId);
+          const latestStored = stored?.mangaInfo?.additionalInfo?.[LATEST_CHAPTER_INFO_KEY] ?? null;
+          if (result.value === null || result.value === latestStored) {
             idsToSkip.push(mangaId);
           }
+          continue;
         }
-      } else if (missingIds.length > VERIFY_MISSING_THRESHOLD) {
-        idsToSkip.push(...missingIds);
-      }
 
-      await skip(idsToSkip);
+        if (isNotFoundError(result.reason)) {
+          idsToSkip.push(mangaId);
+        }
+      }
+    } else if (missingIds.length > VERIFY_MISSING_THRESHOLD) {
+      idsToSkip.push(...missingIds);
     }
+
+    await skip(idsToSkip);
   }
 }
