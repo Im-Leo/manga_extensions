@@ -71,6 +71,17 @@ function registerOfflineTests(suite: TestSuite): void {
     expect(tiles[1]?.title).to.equal("Beta & Friends");
   });
 
+  suite.test("parseDiscoverSectionItems: update tiles open their latest chapter", async () => {
+    const items = parseDiscoverSectionItems(cheerio.load(LISTING_HTML), {
+      id: "latest_updates",
+      title: "Latest Updates",
+      type: DiscoverSectionType.chapterUpdates,
+    });
+
+    const chapterIds = items.map((item) => (item as { chapterId?: string }).chapterId);
+    expect(chapterIds).to.deep.equal(["chapter-12", "chapter-3", ""]);
+  });
+
   suite.test("no discover section uses the featured hero", async () => {
     // Paperback masks grid tiles by content rating but not the featured hero, so
     // an adult cover shows there unblurred however the tile is rated. The parser

@@ -159,13 +159,13 @@ export function parseDiscoverSectionItems(
 ): DiscoverSectionItem[] {
   const items: DiscoverSectionItem[] = [];
 
-  for (const entry of listingEntries($)) {
+  for (const { entry, chapterId } of parseListing($)) {
     switch (section.type) {
       case DiscoverSectionType.featured:
         items.push({ ...entry, supertitle: entry.subtitle, type: "featuredCarouselItem" });
         break;
       case DiscoverSectionType.chapterUpdates:
-        items.push({ ...entry, chapterId: "", type: "chapterUpdatesCarouselItem" });
+        items.push({ ...entry, chapterId, type: "chapterUpdatesCarouselItem" });
         break;
       case DiscoverSectionType.prominentCarousel:
         items.push({ ...entry, type: "prominentCarouselItem" });
@@ -245,7 +245,19 @@ interface ListingEntry {
 }
 
 function listingEntries($: CheerioAPI, browsedGenre?: string): ListingEntry[] {
-  const entries: ListingEntry[] = [];
+  return parseListing($, browsedGenre).map(({ entry }) => entry);
+}
+
+/** A tile's latest-chapter link is `/manga/<mangaId>/<chapterId>`; "" when it has no such link. */
+function chapterIdOf(href: string | undefined): string {
+  return /\/manga\/[^/]+\/([^/?#]+)/.exec(href ?? "")?.[1] ?? "";
+}
+
+function parseListing(
+  $: CheerioAPI,
+  browsedGenre?: string,
+): { entry: ListingEntry; chapterId: string }[] {
+  const entries: { entry: ListingEntry; chapterId: string }[] = [];
 
   // Every title on /genre/<x> carries that genre, so it rates the whole page. Only
   // a rating it raises applies: a safe genre leaves the other genres unknown.
@@ -256,14 +268,16 @@ function listingEntries($: CheerioAPI, browsedGenre?: string): ListingEntry[] {
     const title = $("img", node).attr("alt")?.trim() ?? "";
     if (!mangaId || !title) continue;
 
+    const chapterLink = $("a.list-story-item-wrap-chapter", node).first();
     entries.push({
-      mangaId,
-      title: Application.decodeHTMLEntities(title),
-      subtitle: Application.decodeHTMLEntities(
-        $("a.list-story-item-wrap-chapter", node).first().text().trim(),
-      ),
-      imageUrl: resolveImageUrl($("img", node)),
-      contentRating: fromGenre === ContentRating.EVERYONE ? ratings.recall(mangaId) : fromGenre,
+      entry: {
+        mangaId,
+        title: Application.decodeHTMLEntities(title),
+        subtitle: Application.decodeHTMLEntities(chapterLink.text().trim()),
+        imageUrl: resolveImageUrl($("img", node)),
+        contentRating: fromGenre === ContentRating.EVERYONE ? ratings.recall(mangaId) : fromGenre,
+      },
+      chapterId: chapterIdOf(chapterLink.attr("href")),
     });
   }
 

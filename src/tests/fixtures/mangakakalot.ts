@@ -6,7 +6,7 @@ import { DOMAIN } from "../../MangaKakalot/models.js";
 /**
  * Hand-written markup carrying only what each selector reads. The three entries
  * differ in image attribute and href shape, so one fixture covers every branch
- * of the cover-URL resolver.
+ * of the cover-URL resolver; the last has no usable chapter link.
  */
 export const LISTING_HTML = `
 <html><body>
@@ -14,12 +14,12 @@ export const LISTING_HTML = `
     <a href="${DOMAIN}/manga/alpha-title/"><img
       alt="Alpha Title" src="https://img.example.com/placeholder.gif"
       data-src="https://img-r1.2xstorage.com/thumb/alpha.webp"></a>
-    <a class="list-story-item-wrap-chapter" href="#">Chapter 12</a>
+    <a class="list-story-item-wrap-chapter" href="${DOMAIN}/manga/alpha-title/chapter-12">Chapter 12</a>
   </div>
   <div class="list-comic-item-wrap">
     <a href="${DOMAIN}/manga/beta-title"><img
       alt="Beta &amp; Friends" src="/uploads/beta.webp"></a>
-    <a class="list-story-item-wrap-chapter" href="#">Chapter 3</a>
+    <a class="list-story-item-wrap-chapter" href="${DOMAIN}/manga/beta-title/chapter-3/">Chapter 3</a>
   </div>
   <div class="list-comic-item-wrap">
     <a href="${DOMAIN}/manga/gamma-title/"><img
