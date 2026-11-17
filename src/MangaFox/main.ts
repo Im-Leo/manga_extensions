@@ -22,10 +22,10 @@ import type { CheerioAPI } from "cheerio";
 
 import { TtlCache } from "../utils/cache";
 import { ContentRatingCache } from "../utils/content-rating";
+import { SingleGenreSearchForm } from "../utils/forms/single-genre-search";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor";
 import { toDiscoverItem, type ListingEntry } from "../utils/listing";
 import { fetchCheerio, fetchTitlePage } from "../utils/network";
-import { MangaFoxAdvancedSearchForm } from "./forms/search";
 import { DOMAIN, GENRES, type Metadata, type SearchMetadata } from "./models";
 import {
   LAYOUT_COMPACT,
@@ -142,7 +142,8 @@ export class MangaFoxExtension implements ExtensionImpl<typeof MangaFoxConfig> {
   }
 
   async getAdvancedSearchForm(query: SearchQuery<SearchMetadata>): Promise<AdvancedSearchForm> {
-    return new MangaFoxAdvancedSearchForm(query);
+    // The site appends a single `?genres=` id and has no multi-genre endpoint.
+    return new SingleGenreSearchForm(query, GENRES, "The site searches one genre at a time");
   }
 
   async getSearchResults(

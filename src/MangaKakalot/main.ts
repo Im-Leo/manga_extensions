@@ -22,9 +22,9 @@ import {
 
 import { TtlCache } from "../utils/cache";
 import { ContentRatingCache, RatingResolver } from "../utils/content-rating";
+import { SingleGenreSearchForm } from "../utils/forms/single-genre-search";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor";
 import { fetchCheerio, fetchJSON, fetchTitlePage } from "../utils/network";
-import { MangaKakalotAdvancedSearchForm } from "./forms/search";
 import {
   DISCOVER_SECTIONS,
   DOMAIN,
@@ -130,7 +130,8 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
       return section;
     });
 
-    return new MangaKakalotAdvancedSearchForm(query, genres);
+    // Genres are scraped from the homepage; the site browses one through /genre/<id>.
+    return new SingleGenreSearchForm(query, genres.tags, "The site browses one genre at a time");
   }
 
   async getSearchResults(
