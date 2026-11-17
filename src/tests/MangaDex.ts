@@ -19,6 +19,7 @@ import {
   type Relationship,
   RelationshipType,
 } from "../MangaDex/models.js";
+import { parseMangaList } from "../MangaDex/parsers.js";
 import sourceInfo from "../MangaDex/pbconfig.js";
 import {
   buildCoverImageUrl,
@@ -417,6 +418,29 @@ export async function runTests(logger: TestLogger) {
       hasNextGroupPage(10_000 - page, page, 50_000),
       "offset + limit would pass 10000",
     ).to.equal(false);
+  });
+
+  suite.test("parseMangaList: a latest chapter missing from the batch falls back", async () => {
+    const manga = {
+      id: "11111111-1111-4111-8111-111111111111",
+      type: "manga",
+      attributes: {
+        title: { en: "Title" },
+        altTitles: [],
+        description: {},
+        status: "ongoing",
+        contentRating: "safe",
+        tags: [],
+        originalLanguage: "ja",
+        lastVolume: "",
+        lastChapter: "42",
+        latestUploadedChapter: "chapter-in-another-language",
+      },
+      relationships: [],
+    };
+
+    const [item] = parseMangaList([manga] as never, () => "", undefined, undefined, {});
+    expect(item?.subtitle).to.contain("42");
   });
 
   registerMangaDexCollectionTests(suite);

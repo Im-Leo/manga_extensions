@@ -203,19 +203,14 @@ export const parseMangaList = (
       ? ratingIconMap[(mangaDetails.contentRating as string)?.toLowerCase() ?? ""] || ""
       : "";
 
-    let chapterVolume: string | undefined;
-    let chapterNumber: string | undefined;
-    if (chapterDetailsMap) {
-      const latestChapterId = manga.attributes.latestUploadedChapter;
-      const latestChapterDetails = latestChapterId ? chapterDetailsMap[latestChapterId] : undefined;
-      if (latestChapterDetails) {
-        chapterVolume = latestChapterDetails.volume ?? undefined;
-        chapterNumber = latestChapterDetails.chapter ?? undefined;
-      }
-    } else {
-      chapterVolume = mangaDetails.lastVolume ?? undefined;
-      chapterNumber = mangaDetails.lastChapter ?? undefined;
-    }
+    // The batch is filtered by language, so the latest upload may be missing from it; the title's
+    // own last volume and chapter then stand in rather than leaving the subtitle blank.
+    const latestChapterId = manga.attributes.latestUploadedChapter;
+    const latestChapterDetails = latestChapterId ? chapterDetailsMap?.[latestChapterId] : undefined;
+    const chapterVolume =
+      (latestChapterDetails ? latestChapterDetails.volume : mangaDetails.lastVolume) ?? undefined;
+    const chapterNumber =
+      (latestChapterDetails ? latestChapterDetails.chapter : mangaDetails.lastChapter) ?? undefined;
 
     const chapterInfo = parseChapterTitle(
       { title: undefined, volume: chapterVolume, chapter: chapterNumber },
