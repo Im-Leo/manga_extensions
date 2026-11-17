@@ -46,6 +46,13 @@ const SOURCE_MANGA = {
   mangaInfo: { primaryTitle: "Sword King" },
 } as SourceManga;
 
+/**
+ * Pinned for the live tests. Searching with an empty title lists the newest
+ * additions first, and a title added minutes ago often has no chapters yet,
+ * which fails the chapter step on behavior that is correct.
+ */
+const LIVE_MANGA_ID = "onepunch_man";
+
 function registerOfflineTests(suite: TestSuite): void {
   suite.test("parseListing: compact layout", async () => {
     // Listing markup here carries title, cover, chapter and a star score, but no
@@ -270,7 +277,9 @@ export async function runTests(logger: TestLogger) {
   registerRequestTests(suite);
   registerMangaFoxReaderTests(suite);
 
-  registerSourceTests(suite, MangaFox, sourceInfo);
+  registerSourceTests(suite, MangaFox, sourceInfo, {
+    mangaProviding: { getMangaDetails: [LIVE_MANGA_ID] },
+  });
 
   await suite.run();
 }
