@@ -44,20 +44,12 @@ export async function getMangaDetails(mangaId: string): Promise<SourceManga> {
       }
     : undefined;
 
-  // Joins the parallel batch speculatively: whether it is needed depends on a
-  // status not known until the batch resolves.
-  const aggregateRequest = {
-    url: buildMangaAggregateUrl(resolvedId, getLanguages()).toString(),
-    method: "GET",
-  };
-
-  const [detailsResult, statsResult, coverResult, aggregateResult] = await Promise.allSettled([
+  const [detailsResult, statsResult, coverResult] = await Promise.allSettled([
     fetchJSON<MangaDetailsResponse>(detailsRequest),
     fetchJSON<StatisticsResponse>(statisticsRequest),
     coverRequest
       ? fetchJSON<CoverSearchResponse>(coverRequest)
       : Promise.resolve(undefined as CoverSearchResponse | undefined),
-    fetchJSON<AggregateResponse>(aggregateRequest),
   ]);
 
   if (detailsResult.status === "rejected") {
@@ -74,9 +66,14 @@ export async function getMangaDetails(mangaId: string): Promise<SourceManga> {
     throw new Error(`MangaDex API Error: missing data field for ${resolvedId}`);
   }
 
+  // Only a completed title needs the aggregate, to check its final chapter is uploaded. Asked for
+  // after the status is known: one extra round trip for those titles, one request fewer for the rest.
   const aggregateJson: AggregateResponse | undefined =
-    json.data.attributes?.status === Status.Completed && aggregateResult.status === "fulfilled"
-      ? aggregateResult.value
+    json.data.attributes?.status === Status.Completed
+      ? await fetchJSON<AggregateResponse>({
+          url: buildMangaAggregateUrl(resolvedId, getLanguages()).toString(),
+          method: "GET",
+        }).catch(() => undefined)
       : undefined;
 
   const ratingJson: StatisticsResponse | undefined =

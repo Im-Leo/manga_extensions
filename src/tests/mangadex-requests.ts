@@ -4,6 +4,7 @@
 import { expect } from "chai";
 
 import { getDiscoverSectionItems } from "../MangaDex/discover.js";
+import { getMangaDetails } from "../MangaDex/manga.js";
 import { getSearchResults } from "../MangaDex/search.js";
 import { saveBlockedGroups, setGroupBlockingEnabled } from "../MangaDex/state/blocking.js";
 import { DISCOVER_SECTIONS } from "../MangaDex/state/discover.js";
@@ -41,6 +42,40 @@ function mangaList(ids: string[]) {
 function mangaIdsOf(items: readonly unknown[]): string[] {
   return items.map((item) => (item as { mangaId: string }).mangaId);
 }
+
+/** A title as `/manga/{id}` returns it, with only what the details parser reads. */
+function mangaDetails(id: string, status: string) {
+  return {
+    body: {
+      result: "ok",
+      data: {
+        id,
+        type: "manga",
+        attributes: {
+          title: { en: "Title" },
+          altTitles: [],
+          description: { en: "" },
+          status,
+          contentRating: "safe",
+          tags: [],
+          links: {},
+          originalLanguage: "ja",
+          lastChapter: "10",
+          lastVolume: "",
+        },
+        relationships: [],
+      },
+    },
+  };
+}
+
+const DETAIL_ROUTES = (id: string, status: string) =>
+  [
+    [`/manga/${id}/aggregate`, { body: { result: "ok", volumes: {} } }],
+    [`/manga/${id}?`, mangaDetails(id, status)],
+    [`/statistics/manga/${id}`, { body: { result: "ok", statistics: {} } }],
+    ["/cover?", { body: { data: [] } }],
+  ] as const;
 
 /** What MangaDex asks the API for, checked from the requests a flow actually makes. */
 export function registerMangaDexRequestTests(suite: TestSuite): void {
@@ -85,6 +120,21 @@ export function registerMangaDexRequestTests(suite: TestSuite): void {
 
         expect(mangaIdsOf(first.items)).to.deep.equal([ALPHA, BETA]);
         expect(mangaIdsOf(second.items), "BETA was already shown").to.deep.equal([GAMMA]);
+      },
+    );
+  });
+
+  suite.test("details: the chapter aggregate is requested only for completed titles", async () => {
+    const ongoing = "66666666-6666-4666-8666-666666666666";
+    const completed = "77777777-7777-4777-8777-777777777777";
+    await withFakeNetwork(
+      [...DETAIL_ROUTES(ongoing, "ongoing"), ...DETAIL_ROUTES(completed, "completed")],
+      async (network) => {
+        await getMangaDetails(ongoing);
+        await getMangaDetails(completed);
+
+        expect(network.count(`/manga/${ongoing}/aggregate`), "ongoing").to.equal(0);
+        expect(network.count(`/manga/${completed}/aggregate`), "completed").to.equal(1);
       },
     );
   });
