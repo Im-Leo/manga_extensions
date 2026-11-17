@@ -71,26 +71,34 @@ export class GroupBlockForm extends Form {
     const showResults = this.hasSearched && hasSearchResults && canPaginate;
 
     return [
-      Section("group_blocking_settings", [
-        ToggleRow("group_blocking_enabled", {
-          title: "Group Blocking",
-          value: groupBlockingEnabled,
-          onValueChange: Application.Selector(
-            this as GroupBlockForm,
-            "handleGroupBlockingEnabledChange",
-          ),
-        }),
-        ToggleRow("fuzzy_blocking_enabled", {
-          title: "Fuzzy Matching",
-          subtitle: "Catches groups that slip through",
-          value: getFuzzyBlockingEnabled(),
-          onValueChange: Application.Selector(
-            this as GroupBlockForm,
-            "handleFuzzyBlockingEnabledChange",
-          ),
-          isHidden: !groupBlockingEnabled,
-        }),
-      ]),
+      Section(
+        {
+          id: "group_blocking_settings",
+          footer: groupBlockingEnabled
+            ? undefined
+            : "The groups below are hidden only while Group Blocking is on.",
+        },
+        [
+          ToggleRow("group_blocking_enabled", {
+            title: "Group Blocking",
+            value: groupBlockingEnabled,
+            onValueChange: Application.Selector(
+              this as GroupBlockForm,
+              "handleGroupBlockingEnabledChange",
+            ),
+          }),
+          ToggleRow("fuzzy_blocking_enabled", {
+            title: "Fuzzy Matching",
+            subtitle: "Also hides groups whose names resemble or contain a blocked name",
+            value: getFuzzyBlockingEnabled(),
+            onValueChange: Application.Selector(
+              this as GroupBlockForm,
+              "handleFuzzyBlockingEnabledChange",
+            ),
+            isHidden: !groupBlockingEnabled,
+          }),
+        ],
+      ),
 
       Section(
         {
