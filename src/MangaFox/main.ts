@@ -23,6 +23,7 @@ import type { CheerioAPI } from "cheerio";
 import { TtlCache } from "../utils/cache";
 import { ContentRatingCache } from "../utils/content-rating";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor";
+import { toDiscoverItem, type ListingEntry } from "../utils/listing";
 import { fetchCheerio, fetchTitlePage } from "../utils/network";
 import { MangaFoxAdvancedSearchForm } from "./forms/search";
 import { DOMAIN, GENRES, type Metadata, type SearchMetadata } from "./models";
@@ -34,7 +35,6 @@ import {
   parseListing,
   parseMangaDetails,
   parseNextPage,
-  type ListingEntry,
 } from "./parsers";
 import type MangaFoxConfig from "./pbconfig";
 import { extractChapterPages } from "./reader";
@@ -120,20 +120,20 @@ export class MangaFoxExtension implements ExtensionImpl<typeof MangaFoxConfig> {
       case SECTION_HOT: {
         const $ = await fetchCheerio(DOMAIN);
         return {
-          items: toDiscoverItems(parseListing($, LAYOUT_COMPACT, seenIds, this.ratings), section),
+          items: toItems(parseListing($, LAYOUT_COMPACT, seenIds, this.ratings), section.type),
         };
       }
 
       case SECTION_NEW: {
         const $ = await fetchCheerio(directoryUrl(page));
         const items = parseListing($, LAYOUT_COMPACT_WITH_CHAPTER, seenIds, this.ratings);
-        return { items: toDiscoverItems(items, section), metadata: nextMetadata($, page, seenIds) };
+        return { items: toItems(items, section.type), metadata: nextMetadata($, page, seenIds) };
       }
 
       case SECTION_LATEST: {
         const $ = await fetchCheerio(releasesUrl(page));
         const items = parseListing($, LAYOUT_DETAILED, seenIds, this.ratings);
-        return { items: toDiscoverItems(items, section), metadata: nextMetadata($, page, seenIds) };
+        return { items: toItems(items, section.type), metadata: nextMetadata($, page, seenIds) };
       }
 
       default:
@@ -199,17 +199,8 @@ function nextMetadata(
   return next ? { page: next, collectedIds: seenIds } : undefined;
 }
 
-function toDiscoverItems(entries: ListingEntry[], section: DiscoverSection): DiscoverSectionItem[] {
-  return entries.map((entry) => {
-    switch (section.type) {
-      case DiscoverSectionType.featured:
-        return { ...entry, supertitle: entry.subtitle, type: "featuredCarouselItem" as const };
-      case DiscoverSectionType.prominentCarousel:
-        return { ...entry, type: "prominentCarouselItem" as const };
-      default:
-        return { ...entry, type: "simpleCarouselItem" as const };
-    }
-  });
-}
-
 export const MangaFox = new MangaFoxExtension();
+
+function toItems(entries: ListingEntry[], type: DiscoverSectionType): DiscoverSectionItem[] {
+  return entries.map((entry) => toDiscoverItem(entry, type));
+}

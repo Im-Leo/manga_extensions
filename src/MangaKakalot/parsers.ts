@@ -1,22 +1,22 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
-import {
-  DiscoverSectionType,
-  type Chapter,
-  type ContentRating,
-  type ChapterDetails,
-  type DiscoverSection,
-  type DiscoverSectionItem,
-  type SearchResultItem,
-  type SourceManga,
-  type Tag,
-  type TagSection,
+import type {
+  Chapter,
+  ChapterDetails,
+  ContentRating,
+  DiscoverSection,
+  DiscoverSectionItem,
+  SearchResultItem,
+  SourceManga,
+  Tag,
+  TagSection,
 } from "@paperback/types";
 import type { Cheerio, CheerioAPI } from "cheerio";
 import type { Element } from "domhandler";
 
 import { rateContent, type ContentRatingCache } from "../utils/content-rating";
+import { toDiscoverItem, type ListingEntry } from "../utils/listing";
 import { normalizeRating } from "../utils/rating";
 import { DOMAIN, LANGUAGE, type ApiChapter, type ChapterListResponse } from "./models";
 
@@ -161,26 +161,9 @@ export function parseDiscoverSectionItems(
   section: DiscoverSection,
   ratings: ContentRatingCache,
 ): DiscoverSectionItem[] {
-  const items: DiscoverSectionItem[] = [];
-
-  for (const { entry, chapterId } of parseListing($, ratings)) {
-    switch (section.type) {
-      case DiscoverSectionType.featured:
-        items.push({ ...entry, supertitle: entry.subtitle, type: "featuredCarouselItem" });
-        break;
-      case DiscoverSectionType.chapterUpdates:
-        items.push({ ...entry, chapterId, type: "chapterUpdatesCarouselItem" });
-        break;
-      case DiscoverSectionType.prominentCarousel:
-        items.push({ ...entry, type: "prominentCarouselItem" });
-        break;
-      case DiscoverSectionType.simpleCarousel:
-        items.push({ ...entry, type: "simpleCarouselItem" });
-        break;
-    }
-  }
-
-  return items;
+  return parseListing($, ratings).map(({ entry, chapterId }) =>
+    toDiscoverItem(entry, section.type, chapterId),
+  );
 }
 
 export function parseSearchResults(
@@ -234,19 +217,6 @@ export function isLastPage($: CheerioAPI): boolean {
 
   const lastPage = (/(\d+)/.exec($(".page-last, .page_last").text()) ?? [""])[0];
   return Number(lastPage) === Number(currentPage);
-}
-
-/**
- * The fields discover items and genre-browse results share. Kept apart from
- * `SearchResultItem`, whose loose `metadata: unknown` is incompatible with the
- * `JSONValue` the carousel types demand.
- */
-interface ListingEntry {
-  mangaId: string;
-  title: string;
-  subtitle: string;
-  imageUrl: string;
-  contentRating: ContentRating;
 }
 
 function listingEntries(

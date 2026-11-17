@@ -1,10 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
-import type { Chapter, ContentRating, SourceManga, Tag, TagSection } from "@paperback/types";
+import type { Chapter, SourceManga, Tag, TagSection } from "@paperback/types";
 import type { CheerioAPI } from "cheerio";
 
 import { rateContent, type ContentRatingCache } from "../utils/content-rating";
+import type { ListingEntry } from "../utils/listing";
 import { normalizeRating } from "../utils/rating";
 
 /**
@@ -37,14 +38,6 @@ export const LAYOUT_DETAILED: ListingLayout = {
   cover: "img.manga-list-4-cover",
   subtitle: "ul.manga-list-4-item-part > li",
 };
-
-export interface ListingEntry {
-  mangaId: string;
-  title: string;
-  subtitle: string;
-  imageUrl: string;
-  contentRating: ContentRating;
-}
 
 /** `seenIds` is carried across pages and mutated here, since pages repeat entries. */
 export function parseListing(
