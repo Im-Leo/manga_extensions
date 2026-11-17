@@ -89,6 +89,16 @@ export const DETAIL_MATURE_HTML = DETAIL_SAFE_HTML.replace(
  * The first entry has a dotted id, the shape that 404s because the site's
  * redirect reads ".1" as a file extension. Newest is listed first.
  */
+/** Chapters past the relative window are dated "MMM DD,YYYY", padded as the site serves them. */
+export const DATED_CHAPTER_LIST_HTML = `
+<html><body>
+  <div id="chapterlist"><ul>
+    <li><a href="/manga/sword_king/v10/c052/1.html"><p class="title2">Sep 09,2015 </p></a></li>
+    <li><a href="/manga/sword_king/vTBD/c239/1.html"><p class="title2">Oct 16,2026 </p></a></li>
+    <li><a href="/manga/sword_king/c001/1.html"><p class="title2">not a date</p></a></li>
+  </ul></div>
+</body></html>`;
+
 export const CHAPTER_LIST_HTML = `
 <html><body>
   <div id="chapterlist"><ul>

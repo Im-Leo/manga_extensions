@@ -160,7 +160,7 @@ export function parseChapters($: CheerioAPI, sourceManga: SourceManga): Chapter[
       sourceManga,
       langCode: "en",
       chapNum: Number.isNaN(chapNum) ? 0 : chapNum,
-      publishDate: parseRelativeDate($("p.title2", node).html() ?? ""),
+      publishDate: parseChapterDate($("p.title2", node).text()),
     });
   }
 
@@ -192,9 +192,14 @@ const RELATIVE_UNITS: [RegExp, number][] = [
   [/SECOND/, 1000],
 ];
 
-/** Recent chapters are dated relatively ("3 days ago") until they age into a date. */
-function parseRelativeDate(raw: string): Date {
-  const text = raw.toUpperCase();
+const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+
+/**
+ * Recent chapters are dated relatively ("3 days ago") until they age into "Sep 09,2015". The
+ * absolute form is parsed by hand: how `Date` reads it varies between JavaScript engines.
+ */
+function parseChapterDate(raw: string): Date | undefined {
+  const text = raw.trim().toUpperCase();
 
   if (text.includes("LESS THAN AN HOUR") || text.includes("JUST NOW")) return new Date();
   if (text.includes("YESTERDAY")) return new Date(Date.now() - 86400000);
@@ -205,5 +210,8 @@ function parseRelativeDate(raw: string): Date {
     if (unit) return new Date(Date.now() - amount * unit[1]);
   }
 
-  return new Date(raw);
+  const absolute = /^([A-Z]{3})\s+(\d{1,2}),\s*(\d{4})$/.exec(text);
+  const month = MONTHS.indexOf(absolute?.[1] ?? "");
+  if (!absolute || month === -1) return undefined;
+  return new Date(Number(absolute[3]), month, Number(absolute[2]));
 }

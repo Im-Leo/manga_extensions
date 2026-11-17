@@ -29,6 +29,7 @@ import { assertDiscoverSectionItem, assertSourceManga } from "./contracts.js";
 import { withFakeNetwork } from "./fakes/application.js";
 import {
   CHAPTER_LIST_HTML,
+  DATED_CHAPTER_LIST_HTML,
   COMPACT_LISTING_HTML,
   DETAILED_LISTING_HTML,
   DETAIL_ADULT_HTML,
@@ -191,6 +192,15 @@ function registerOfflineTests(suite: TestSuite): void {
     expect(chapters.every((chapter) => Number.isFinite(chapter.publishDate!.getTime()))).to.equal(
       true,
     );
+  });
+
+  suite.test("parseChapters: reads absolute dates and never yields an invalid one", async () => {
+    const chapters = parseChapters(cheerio.load(DATED_CHAPTER_LIST_HTML), SOURCE_MANGA);
+    const dates = chapters.map((chapter) => chapter.publishDate);
+
+    expect(dates[0], "unparseable dates are omitted").to.equal(undefined);
+    expect(dates[1]?.getTime()).to.equal(new Date(2026, 9, 16).getTime());
+    expect(dates[2]?.getTime()).to.equal(new Date(2015, 8, 9).getTime());
   });
 
   suite.test("genres carousel emits metadata, not the 0.8 filters key", async () => {
