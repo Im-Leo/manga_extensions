@@ -16,7 +16,7 @@ import { getAccessToken, readJwtBody, saveAccessToken } from "../state";
 import { SessionInfoForm } from "./session-info";
 import { WebsiteStatusForm } from "./website-status";
 
-/** Thumbnail quality and the other choices that only affect presentation. */
+/** Signing in to MangaDex, the session behind it, and the site's service status. */
 export class WebsiteSettingsForm extends Form {
   override getSections(): FormSectionElement<unknown>[] {
     return [

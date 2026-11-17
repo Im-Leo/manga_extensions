@@ -58,7 +58,7 @@ const NATIVE_TITLE_DISPLAY_LABELS: Record<string, string> = {
   description: "Description",
 };
 
-/** Which content ratings are enabled, and how chapters are filtered by them. */
+/** Languages, content ratings, which chapters load and how, titles and synopses, and covers. */
 export class ContentSettingsForm extends Form {
   override getSections(): FormSectionElement<unknown>[] {
     const selectedLanguages = getLanguages();

@@ -25,7 +25,7 @@ const STATUS_ICON_LEGEND = STATUSES.filter((s) => s.searchable)
   .join(", ");
 const RATING_ICON_LEGEND = RATINGS.map((r) => `${r.icon} ${r.shortName}`).join(", ");
 
-/** Defaults applied to every search: ordering, and what the subtitle shows. */
+/** Search tags and relevance, and what search and Home tiles show in their subtitles. */
 export class SearchSettingsForm extends Form {
   private refreshStatus: string = "";
   private isRefreshing: boolean = false;

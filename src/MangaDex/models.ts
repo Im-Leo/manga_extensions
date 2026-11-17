@@ -4,7 +4,7 @@
 import type { JSONObject } from "@paperback/types";
 
 /**
- * Wire types for the MangaDex v5 API, plus the endpoints they come from.
+ * Wire types for the MangaDex v5 API; the endpoints are built in `urls.ts`.
  *
  * These mirror the API's own shapes rather than the extension's needs, so most
  * are consumed only in part: `parsers.ts` narrows them to Paperback objects.
@@ -144,7 +144,7 @@ export enum Status {
   Completed = "completed",
   Ongoing = "ongoing",
   Hiatus = "hiatus",
-  Cancelled = "cancelled",
+  Canceled = "cancelled",
   PublishingFinished = "publishing_finished",
 }
 
