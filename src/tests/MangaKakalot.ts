@@ -286,6 +286,7 @@ function registerOfflineTests(suite: TestSuite): void {
       new ContentRatingCache(),
       "adult",
     );
+    expect(adult.length, "the fixture's tiles parsed").to.be.greaterThan(0);
     for (const item of adult) {
       expect(item.contentRating, `${item.mangaId} from an adult genre`).to.equal(
         ContentRating.ADULT,
@@ -298,6 +299,7 @@ function registerOfflineTests(suite: TestSuite): void {
       new ContentRatingCache(),
       "comedy",
     );
+    expect(comedy.length, "the fixture's tiles parsed").to.be.greaterThan(0);
     for (const item of comedy) {
       expect(item.contentRating, "a safe genre does not assert safety").to.not.equal(
         ContentRating.EVERYONE,

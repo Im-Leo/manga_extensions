@@ -144,6 +144,7 @@ function registerOfflineTests(suite: TestSuite): void {
       new ContentRatingCache(),
       "Adult",
     );
+    expect(adult.length, "the fixture's tiles parsed").to.be.greaterThan(0);
     for (const entry of adult) {
       expect(entry.contentRating).to.equal(ContentRating.ADULT);
     }
@@ -155,6 +156,7 @@ function registerOfflineTests(suite: TestSuite): void {
       new ContentRatingCache(),
       "Comedy",
     );
+    expect(comedy.length, "the fixture's tiles parsed").to.be.greaterThan(0);
     for (const entry of comedy) {
       expect(entry.contentRating, "must not assert safety").to.not.equal(ContentRating.EVERYONE);
     }

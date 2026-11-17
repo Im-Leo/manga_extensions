@@ -204,6 +204,7 @@ function registerOfflineTests(suite: TestSuite): void {
 
     for (const sectionId of ["popular", "latest", "staff"]) {
       const section = parseHomepageSection(sectionId, HOMEPAGE);
+      expect(section.items.length, `${sectionId} has tiles to check`).to.be.greaterThan(0);
       for (const item of section.items) {
         expect(item.contentRating, `${sectionId} tile carries a rating`).to.not.equal(undefined);
       }
