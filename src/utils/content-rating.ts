@@ -67,19 +67,21 @@ function normalize(genre: string): string {
  */
 export const UNRATED_LISTING_DEFAULT = ContentRating.MATURE;
 
-/** An unrecognized genre yields `EVERYONE`, so a new one cannot start hiding titles. */
+/**
+ * An unrecognized genre yields `EVERYONE`, so a new one cannot start hiding titles. No genres at
+ * all is not evidence of safety, so it yields `UNRATED_LISTING_DEFAULT`.
+ */
 export function rateContent(genres: Iterable<string> | undefined): ContentRating {
-  if (!genres) return ContentRating.EVERYONE;
-
-  let rating = ContentRating.EVERYONE;
-  for (const genre of genres) {
+  let rating: ContentRating | undefined;
+  for (const genre of genres ?? []) {
     const normalized = normalize(genre);
     // ADULT is terminal; a MATURE hit keeps scanning in case an adult genre follows.
     if (ADULT_GENRES.has(normalized)) return ContentRating.ADULT;
     if (MATURE_GENRES.has(normalized)) rating = ContentRating.MATURE;
+    else rating ??= ContentRating.EVERYONE;
   }
 
-  return rating;
+  return rating ?? UNRATED_LISTING_DEFAULT;
 }
 
 /**

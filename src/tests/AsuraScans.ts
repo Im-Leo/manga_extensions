@@ -32,6 +32,7 @@ import {
   seriesUrl,
   trendingUrl,
 } from "../AsuraScans/urls.js";
+import { UNRATED_LISTING_DEFAULT } from "../utils/content-rating.js";
 import { registerAsuraSessionTests } from "./asurascans-session.js";
 import { rejectionOf } from "./async.js";
 import { assertChapter, assertSearchResultItem, assertSourceManga } from "./contracts.js";
@@ -144,7 +145,7 @@ function registerOfflineTests(suite: TestSuite): void {
   suite.test("content rating: a payload without genres is not treated as safe", async () => {
     const missing = makeManga({ genres: undefined });
     expect(missing.genres, "fixture really omits genres").to.equal(undefined);
-    expect(toSearchResultItem(missing).contentRating).to.equal(ContentRating.EVERYONE);
+    expect(toSearchResultItem(missing).contentRating).to.equal(UNRATED_LISTING_DEFAULT);
   });
 
   suite.test("urls: endpoint paths", async () => {

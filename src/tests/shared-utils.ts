@@ -117,6 +117,14 @@ export function registerSharedUtilTests(suite: TestSuite): void {
     }
   });
 
+  suite.test("rateContent: no genres at all is unknown, not safe", async () => {
+    expect(rateContent(undefined)).to.equal(UNRATED_LISTING_DEFAULT);
+    expect(rateContent([])).to.equal(UNRATED_LISTING_DEFAULT);
+    expect(rateContent(["a genre nobody classifies"]), "known to be unclassified").to.equal(
+      ContentRating.EVERYONE,
+    );
+  });
+
   suite.test("learnMissingRatings: never exceeds its concurrency cap", async () => {
     const cache = new ContentRatingCache();
     const ids = Array.from({ length: 20 }, (_, i) => `id-${i}`);
@@ -199,11 +207,6 @@ export function registerSharedUtilTests(suite: TestSuite): void {
     expect(rateContent(["Ecchi", "Smut"]), "adult found after mature").to.equal(
       ContentRating.ADULT,
     );
-
-    expect(rateContent(undefined), "absent genres are not a rating").to.equal(
-      ContentRating.EVERYONE,
-    );
-    expect(rateContent([]), "empty genres").to.equal(ContentRating.EVERYONE);
   });
 
   suite.test("rateContent: an unknown genre never hides a title", async () => {
