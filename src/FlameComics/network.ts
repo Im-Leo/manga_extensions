@@ -1,11 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
-import { URL } from "@paperback/types";
-
 import { TtlCache } from "../utils/cache";
 import { fetchJSON, fetchResponse, fetchText } from "../utils/network";
-import { CDN, DOMAIN } from "./models";
+import { dataUrl, homeUrl, simpleSeriesUrl } from "./urls";
 
 /**
  * Access to the `_next/data` routes, whose paths embed a build id that changes
@@ -40,7 +38,7 @@ interface NextDataEnvelope {
 }
 
 async function fetchBuildId(): Promise<string> {
-  const html = await fetchText(`${DOMAIN}/`);
+  const html = await fetchText(homeUrl());
   const buildId = /"buildId":"([^"]+)"/.exec(html)?.[1];
 
   if (!buildId) {
@@ -48,16 +46,6 @@ async function fetchBuildId(): Promise<string> {
   }
 
   return buildId;
-}
-
-function dataUrl(id: string, segments: string[], query?: Record<string, string>): string {
-  const url = new URL(DOMAIN)
-    .addPathComponent("_next")
-    .addPathComponent("data")
-    .addPathComponent(id);
-  for (const segment of segments) url.addPathComponent(segment);
-  for (const [key, value] of Object.entries(query ?? {})) url.setQueryItem(key, value);
-  return url.toString();
 }
 
 async function fetchPayload<T>(
@@ -120,24 +108,5 @@ export class NextDataClient {
 
 /** `/api/series` is a plain REST route: no envelope, and immune to id rotation. */
 export async function fetchSimpleSeries<T>(): Promise<T> {
-  return fetchJSON<T>(
-    new URL(DOMAIN).addPathComponent("api").addPathComponent("series").toString(),
-  );
-}
-
-/** `last_edit` serves as the cache-buster; covers are replaced in place. */
-export function buildSeriesCoverUrl(
-  seriesId: number | string,
-  cover: string,
-  lastEdit: number | string,
-): string {
-  return `${CDN}/uploads/images/series/${seriesId}/${cover}?${lastEdit}`;
-}
-
-export function buildChapterImageUrl(
-  seriesId: number | string,
-  token: string,
-  name: string,
-): string {
-  return `${CDN}/uploads/images/series/${seriesId}/${token}/${encodeURIComponent(name)}?${token}`;
+  return fetchJSON<T>(simpleSeriesUrl());
 }

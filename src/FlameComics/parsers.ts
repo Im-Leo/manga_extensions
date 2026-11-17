@@ -13,7 +13,6 @@ import type {
 } from "@paperback/types";
 
 import { rateContent } from "../utils/content-rating";
-import { DOMAIN } from "./models";
 import type {
   ChapterDetail,
   ChapterReaderResponse,
@@ -29,7 +28,7 @@ import type {
   SortableListItem,
   TristateParsed,
 } from "./models";
-import { buildChapterImageUrl, buildSeriesCoverUrl } from "./network";
+import { chapterImageUrl, seriesCoverUrl, seriesShareUrl } from "./urls";
 
 /**
  * Wire payloads into Paperback domain objects.
@@ -157,7 +156,7 @@ export const toSearchResultItem = (
   return {
     mangaId: String(item.series_id),
     title: item.title,
-    imageUrl: buildSeriesCoverUrl(item.series_id, item.cover, item.last_edit),
+    imageUrl: seriesCoverUrl(item.series_id, item.cover, item.last_edit),
     contentRating: rateContent(seriesGenres(item)),
     subtitle,
   };
@@ -177,7 +176,7 @@ export const parseHomepageSection = (
           type: "featuredCarouselItem" as const,
           mangaId: String(s.series_id),
           title: s.title,
-          imageUrl: buildSeriesCoverUrl(s.series_id, s.cover, s.last_edit),
+          imageUrl: seriesCoverUrl(s.series_id, s.cover, s.last_edit),
           contentRating: rateContent(seriesGenres(s)),
           subtitle: s.type ?? "",
         })),
@@ -195,7 +194,7 @@ export const parseHomepageSection = (
           // Both halves are needed to fetch pages, and a tile carries no other slot.
           chapterId: topChapter ? `${s.series_id}:${topChapter.token}` : String(s.series_id),
           title: s.title,
-          imageUrl: buildSeriesCoverUrl(s.series_id, s.cover, s.last_edit),
+          imageUrl: seriesCoverUrl(s.series_id, s.cover, s.last_edit),
           contentRating: rateContent(seriesGenres(s)),
           subtitle: topChapter ? `Ch. ${formatChapNum(topChapter.chapter)}` : (s.type ?? ""),
           publishDate: topChapter ? new Date(topChapter.release_date * 1000) : undefined,
@@ -211,7 +210,7 @@ export const parseHomepageSection = (
           type: "prominentCarouselItem" as const,
           mangaId: String(s.series_id),
           title: s.title,
-          imageUrl: buildSeriesCoverUrl(s.series_id, s.cover, s.last_edit),
+          imageUrl: seriesCoverUrl(s.series_id, s.cover, s.last_edit),
           contentRating: rateContent(seriesGenres(s)),
           subtitle: s.type ?? "",
         })),
@@ -236,7 +235,7 @@ export const parseSeriesDetail = (
     title: t,
   }));
   const tagSections: TagSection[] = [{ id: "genres", title: "Genres", tags: genreTags }];
-  const cover = buildSeriesCoverUrl(series.series_id, series.cover, series.last_edit);
+  const cover = seriesCoverUrl(series.series_id, series.cover, series.last_edit);
 
   return {
     mangaId: seriesId,
@@ -252,7 +251,7 @@ export const parseSeriesDetail = (
       artist: (series.artist ?? []).join(", "),
       author: (series.author ?? []).join(", "),
       tagGroups: tagSections,
-      shareUrl: `${DOMAIN}/series/${series.series_id}`,
+      shareUrl: seriesShareUrl(series.series_id),
     },
   };
 };
@@ -307,7 +306,7 @@ export const parseChapterDetails = (
   // Page keys are strings, so a default sort would place "10" before "2".
   const pages = Object.entries(chapter.images)
     .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([, img]) => buildChapterImageUrl(chapter.series_id, chapter.token, img.name));
+    .map(([, img]) => chapterImageUrl(chapter.series_id, chapter.token, img.name));
 
   return { id: chapterId, mangaId: String(chapter.series_id), pages };
 };

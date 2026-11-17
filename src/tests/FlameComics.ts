@@ -5,7 +5,7 @@ import { ContentRating, type Chapter, type SourceManga, type TestLogger } from "
 import { expect } from "chai";
 
 import { FlameComics } from "../FlameComics/main.js";
-import { CDN } from "../FlameComics/models.js";
+import { CDN, DOMAIN } from "../FlameComics/models.js";
 import {
   applyAdvancedFilters,
   buildFilterOptions,
@@ -20,6 +20,14 @@ import {
   toSortableList,
 } from "../FlameComics/parsers.js";
 import sourceInfo from "../FlameComics/pbconfig.js";
+import {
+  chapterImageUrl,
+  dataUrl,
+  homeUrl,
+  seriesCoverUrl,
+  seriesShareUrl,
+  simpleSeriesUrl,
+} from "../FlameComics/urls.js";
 import {
   assertChapter,
   assertChapterDetails,
@@ -61,6 +69,21 @@ function rate(series: Parameters<typeof toSortableList>[0][number]) {
 }
 
 function registerOfflineTests(suite: TestSuite): void {
+  suite.test("urls: one builder per endpoint", async () => {
+    expect(homeUrl()).to.equal(`${DOMAIN}/`);
+    expect(dataUrl("build-1", ["series", "7.json"], { id: "7" })).to.equal(
+      `${DOMAIN}/_next/data/build-1/series/7.json?id=7`,
+    );
+    expect(simpleSeriesUrl()).to.equal(`${DOMAIN}/api/series`);
+    expect(seriesShareUrl(7)).to.equal(`${DOMAIN}/series/7`);
+    expect(seriesCoverUrl(7, "cover.webp", 1700)).to.equal(
+      `${CDN}/uploads/images/series/7/cover.webp?1700`,
+    );
+    expect(chapterImageUrl(7, "tok", "page 1.webp")).to.equal(
+      `${CDN}/uploads/images/series/7/tok/page%201.webp?tok`,
+    );
+  });
+
   suite.test("chapterReference: splits packed ids and falls back for older ones", async () => {
     const packed = { chapterId: "12:tok", sourceManga: SOURCE_MANGA } as Chapter;
     expect(chapterReference(packed)).to.deep.equal({ seriesId: "12", token: "tok" });
