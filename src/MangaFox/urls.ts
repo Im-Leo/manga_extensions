@@ -41,3 +41,16 @@ export function releasesUrl(page: number): string {
     .addPathComponent(page > 1 ? `${page}.html` : "")
     .toString();
 }
+
+/** `genre` is the site's numeric genre id; the title is sent only when it holds more than spaces. */
+export function searchUrl(
+  title: string | undefined,
+  genre: string | undefined,
+  page: number,
+): string {
+  const url = new URL(DOMAIN).addPathComponent("search");
+  if (page > 1) url.setQueryItem("page", page.toString());
+  if (genre) url.setQueryItem("genres", genre);
+  if (title?.trim()) url.setQueryItem("title", title);
+  return url.toString();
+}

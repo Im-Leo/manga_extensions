@@ -22,7 +22,7 @@ import {
   parseNextPage,
 } from "../MangaFox/parsers.js";
 import sourceInfo from "../MangaFox/pbconfig.js";
-import { chapterUrl, directoryUrl, mangaUrl, releasesUrl } from "../MangaFox/urls.js";
+import { chapterUrl, directoryUrl, mangaUrl, releasesUrl, searchUrl } from "../MangaFox/urls.js";
 import { UNRATED_LISTING_DEFAULT } from "../utils/content-rating.js";
 import { rejectionOf } from "./async.js";
 import { assertDiscoverSectionItem, assertSourceManga } from "./contracts.js";
@@ -70,6 +70,8 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("urls: every page URL is final, so no redirect downgrades it to http", async () => {
+    expect(searchUrl("sword king", undefined, 1)).to.equal(`${DOMAIN}/search?title=sword%20king`);
+    expect(searchUrl("   ", "9", 2)).to.equal(`${DOMAIN}/search?page=2&genres=9`);
     expect(mangaUrl("sword_king")).to.equal(`${DOMAIN}/manga/sword_king/`);
     expect(releasesUrl(1)).to.equal(`${DOMAIN}/releases/`);
     expect(releasesUrl(3)).to.equal(`${DOMAIN}/releases/3.html`);

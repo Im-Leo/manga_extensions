@@ -5,7 +5,6 @@ import {
   BasicRateLimiter,
   CookieStorageInterceptor,
   DiscoverSectionType,
-  URL,
   type Chapter,
   type ChapterDetails,
   type Cookie,
@@ -38,7 +37,7 @@ import {
 } from "./parsers";
 import type MangaFoxConfig from "./pbconfig";
 import { extractChapterPages } from "./reader";
-import { chapterUrl, directoryUrl, mangaUrl, releasesUrl } from "./urls";
+import { chapterUrl, directoryUrl, mangaUrl, releasesUrl, searchUrl } from "./urls";
 
 const SECTION_HOT = "hot-release";
 const SECTION_NEW = "new-manga";
@@ -147,16 +146,11 @@ export class MangaFoxExtension implements ExtensionImpl<typeof MangaFoxConfig> {
     const page = metadata?.page ?? 1;
     const seenIds = metadata?.collectedIds ?? [];
 
-    const url = new URL(DOMAIN).addPathComponent("search");
-    if (page > 1) url.setQueryItem("page", page.toString());
-
     const genre = query.metadata?.genres?.[0];
-    if (genre) url.setQueryItem("genres", genre);
     // The site filters by numeric id; the rating classifier needs the genre name.
     const genreTitle = GENRES.find((entry) => entry.id === genre)?.title;
-    if (query.title?.trim()) url.setQueryItem("title", query.title);
 
-    const $ = await fetchCheerio(url.toString());
+    const $ = await fetchCheerio(searchUrl(query.title, genre, page));
 
     return {
       items: parseListing($, LAYOUT_DETAILED, seenIds, genreTitle),
