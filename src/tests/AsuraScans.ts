@@ -187,6 +187,17 @@ function registerOfflineTests(suite: TestSuite): void {
     },
   );
 
+  suite.test("chapters: a title opening costs one chapter list request", async () => {
+    const extension = new AsuraScansExtension();
+    const sourceManga = { mangaId: "example-series", mangaInfo: {} } as SourceManga;
+
+    await withFakeNetwork([["/chapters", { body: { data: [] } }]], async (network) => {
+      // Details and progress both read the chapter list as the title opens.
+      await Promise.all([extension.getChapters(sourceManga), extension.getChapters(sourceManga)]);
+      expect(network.count("/chapters")).to.equal(1);
+    });
+  });
+
   suite.test("search form: loading its filters costs one genre request", async () => {
     clearCachedTags();
     const extension = new AsuraScansExtension();

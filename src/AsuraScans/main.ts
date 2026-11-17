@@ -22,6 +22,7 @@ import {
   type TrackedMangaChapterReadAction,
 } from "@paperback/types";
 
+import { TtlCache } from "../utils/cache";
 import { rateContent } from "../utils/content-rating";
 import { SiteInterceptor } from "../utils/interceptor";
 import { fetchJSON } from "../utils/network";
@@ -69,6 +70,9 @@ import {
 
 const PAGE_SIZE = 20;
 
+/** Covers a title opening, where details and progress both read the list; short enough to see new chapters. */
+const CHAPTER_LIST_TTL_MS = 60 * 1000;
+
 export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
   private readonly rateLimiter = new BasicRateLimiter("ratelimiter", {
     numberOfRequests: 6,
@@ -80,6 +84,11 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
   private readonly interceptor = new SiteInterceptor("main", { domain: AS_DOMAIN });
 
   private readonly tags = new PersistedTagCache(() => this.fetchTagSections());
+
+  private readonly chapterLists = new TtlCache<string, AsuraChapterResponse>(
+    CHAPTER_LIST_TTL_MS,
+    4,
+  );
 
   async initialise(): Promise<void> {
     this.rateLimiter.registerInterceptor();
@@ -208,7 +217,9 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
   }
 
   async getChapters(sourceManga: SourceManga): Promise<Chapter[]> {
-    const response = await fetchJSON<AsuraChapterResponse>(chapterListUrl(sourceManga.mangaId));
+    const response = await this.chapterLists.get(sourceManga.mangaId, (mangaId) =>
+      fetchJSON<AsuraChapterResponse>(chapterListUrl(mangaId)),
+    );
 
     return parseChapters(response, sourceManga);
   }
