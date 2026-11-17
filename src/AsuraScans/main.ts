@@ -143,7 +143,7 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
         type: "simpleCarouselItem",
         mangaId: manga.slug,
         title: manga.title,
-        imageUrl: manga.cover,
+        imageUrl: manga.cover_url ?? manga.cover,
         subtitle: latestChapterSubtitle(manga),
         contentRating: rateContent(genreNames(manga)),
       };

@@ -1,10 +1,15 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
-import { ContentRating, type SourceManga, type TestLogger } from "@paperback/types";
+import {
+  ContentRating,
+  DiscoverSectionType,
+  type SourceManga,
+  type TestLogger,
+} from "@paperback/types";
 import { expect } from "chai";
 
-import { AsuraScans } from "../AsuraScans/main.js";
+import { AsuraScans, AsuraScansExtension } from "../AsuraScans/main.js";
 import { AS_API_DOMAIN, AS_DOMAIN } from "../AsuraScans/models.js";
 import {
   latestChapterSubtitle,
@@ -30,6 +35,7 @@ import {
 import { registerAsuraSessionTests } from "./asurascans-session.js";
 import { rejectionOf } from "./async.js";
 import { assertChapter, assertSearchResultItem, assertSourceManga } from "./contracts.js";
+import { withFakeNetwork } from "./fakes/application.js";
 import { FUTURE_DATE, PAST_DATE, makeChapter, makeManga } from "./fixtures/asurascans.js";
 import { TestSuite, registerSourceTests } from "./suite.js";
 
@@ -171,6 +177,25 @@ function registerOfflineTests(suite: TestSuite): void {
       ).to.equal(undefined);
     },
   );
+
+  suite.test("discover: carousel tiles prefer cover_url, like search", async () => {
+    const extension = new AsuraScansExtension();
+    const manga = makeManga({ cover: "small.webp", cover_url: "full.webp" });
+    const listing = { body: { data: [manga], meta: { has_more: false } } };
+
+    await withFakeNetwork([["/api/series", listing]], async () => {
+      for (const type of [DiscoverSectionType.simpleCarousel, DiscoverSectionType.chapterUpdates]) {
+        const page = await extension.getDiscoverSectionItems(
+          { id: "section", title: "", type },
+          undefined,
+        );
+        expect(page.items.length, `section ${type}`).to.equal(1);
+        expect((page.items[0] as { imageUrl: string }).imageUrl, `section ${type}`).to.equal(
+          "full.webp",
+        );
+      }
+    });
+  });
 
   suite.test("urls: listing paginates by offset, newest first", async () => {
     const url = listingUrl("latest", 40, 20);
