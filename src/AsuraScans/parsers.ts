@@ -9,7 +9,9 @@ import {
   type AsuraChapter,
   type AsuraChapterResponse,
   type AsuraManga,
+  type AsuraPaging,
   type AsuraReaderResponse,
+  type AsuraSearchResult,
   type AsuraSeriesResponse,
   type PageData,
 } from "./models";
@@ -25,6 +27,18 @@ export function latestChapterSubtitle(manga: AsuraManga): string | undefined {
   if (!latest) return undefined;
 
   return `Chapter ${latest.number}${isEarlyAccess(latest.early_access_until) ? " - (Early Access)" : ""}`;
+}
+
+/**
+ * Pages by the number of items actually returned, so a page shorter than requested can neither
+ * skip nor repeat results.
+ */
+export function nextListingPage(
+  listing: AsuraSearchResult,
+  offset: number,
+): AsuraPaging | undefined {
+  const count = listing.data?.length ?? 0;
+  return listing.meta?.has_more && count > 0 ? { offset: offset + count } : undefined;
 }
 
 /** Genres ship on listing items as well as details, so tiles rate as accurately. */

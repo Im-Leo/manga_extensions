@@ -15,11 +15,15 @@ export const AS_API_DOMAIN = "https://api.asurascans.com";
  */
 export const READER_PAGE_TOKEN = "asura-reader-2026";
 
-export interface AsuraMetadata extends JSONObject {
+export interface AsuraListingMeta {
   total?: number;
   per_page?: number;
   has_more?: boolean;
-  page?: number;
+}
+
+/** Where the next page of a listing starts. */
+export interface AsuraPaging extends JSONObject {
+  offset: number;
 }
 
 export interface Page {
@@ -68,8 +72,9 @@ export interface AsuraReaderResponse {
 export type AsuraSeriesResponse = { series: AsuraManga } | { data: { series: AsuraManga } };
 
 export interface AsuraSearchResult {
-  data: AsuraManga[];
-  meta: AsuraMetadata;
+  /** Null when a search matches nothing. */
+  data: AsuraManga[] | null;
+  meta: AsuraListingMeta;
 }
 
 export interface AsuraManga {

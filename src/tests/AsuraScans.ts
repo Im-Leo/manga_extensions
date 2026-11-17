@@ -8,6 +8,7 @@ import { AsuraScans } from "../AsuraScans/main.js";
 import { AS_API_DOMAIN, AS_DOMAIN } from "../AsuraScans/models.js";
 import {
   latestChapterSubtitle,
+  nextListingPage,
   parseChapters,
   parseMangaDetails,
   releaseDate,
@@ -153,6 +154,23 @@ function registerOfflineTests(suite: TestSuite): void {
       `${AS_API_DOMAIN}/api/series/example-series/chapters/12`,
     );
   });
+
+  suite.test(
+    "nextListingPage: advances by the items returned, not the size requested",
+    async () => {
+      const short = Array.from({ length: 10 }, (_, i) => makeManga({ slug: `s${i}` }));
+
+      expect(nextListingPage({ data: short, meta: { has_more: true } }, 40)).to.deep.equal({
+        offset: 50,
+      });
+      expect(nextListingPage({ data: short, meta: { has_more: false } }, 40)).to.equal(undefined);
+      expect(nextListingPage({ data: null, meta: { has_more: true } }, 0)).to.equal(undefined);
+      expect(
+        nextListingPage({ data: [], meta: { has_more: true } }, 0),
+        "no endless paging",
+      ).to.equal(undefined);
+    },
+  );
 
   suite.test("urls: listing paginates by offset, newest first", async () => {
     const url = listingUrl("latest", 40, 20);

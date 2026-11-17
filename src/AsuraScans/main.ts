@@ -38,7 +38,7 @@ import {
   type AsuraCreatorRequest,
   type AsuraGenre,
   type AsuraSeriesResponse,
-  type AsuraMetadata,
+  type AsuraPaging,
   type AsuraReaderResponse,
   type AsuraSearchResult,
   type SearchMetadata,
@@ -46,6 +46,7 @@ import {
 import {
   genreNames,
   latestChapterSubtitle,
+  nextListingPage,
   parseChapters,
   parseMangaDetails,
   readerPages,
@@ -114,17 +115,17 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
 
   async getDiscoverSectionItems(
     section: DiscoverSection,
-    metadata: AsuraMetadata | undefined,
+    metadata: AsuraPaging | undefined,
   ): Promise<PagedResults<DiscoverSectionItem>> {
     if (section.type === DiscoverSectionType.genres) return this.getGenreSectionItems(section.id);
 
-    const page = metadata?.page ?? 0;
+    const offset = metadata?.offset ?? 0;
 
     if (section.type === DiscoverSectionType.featured) {
       const trending = await fetchJSON<AsuraSearchResult>(trendingUrl());
 
       return {
-        items: trending.data.map((manga) => ({
+        items: (trending.data ?? []).map((manga) => ({
           type: "featuredCarouselItem" as const,
           mangaId: manga.slug,
           title: manga.title,
@@ -135,34 +136,25 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
     }
 
     const sort = section.type === DiscoverSectionType.chapterUpdates ? "latest" : "popular";
-    const listing = await fetchJSON<AsuraSearchResult>(
-      listingUrl(sort, page * (metadata?.per_page ?? PAGE_SIZE), PAGE_SIZE),
-    );
+    const listing = await fetchJSON<AsuraSearchResult>(listingUrl(sort, offset, PAGE_SIZE));
 
-    const items: DiscoverSectionItem[] = listing.data.map((manga) => {
-      const shared = {
+    const items = (listing.data ?? []).map((manga): DiscoverSectionItem => {
+      const item: DiscoverSectionItem = {
+        type: "simpleCarouselItem",
         mangaId: manga.slug,
         title: manga.title,
         imageUrl: manga.cover,
         subtitle: latestChapterSubtitle(manga),
         contentRating: rateContent(genreNames(manga)),
       };
-
-      return section.type === DiscoverSectionType.chapterUpdates
-        ? {
-            ...shared,
-            type: "chapterUpdatesCarouselItem" as const,
-            chapterId: manga.latest_chapters?.[0]?.id.toString() ?? "",
-          }
-        : { ...shared, type: "simpleCarouselItem" as const };
+      if (section.type !== DiscoverSectionType.chapterUpdates) return item;
+      return Object.assign(item, {
+        type: "chapterUpdatesCarouselItem",
+        chapterId: manga.latest_chapters?.[0]?.id.toString() ?? "",
+      });
     });
 
-    return {
-      items,
-      metadata: listing.meta.has_more
-        ? { page: page + 1, per_page: listing.meta.per_page }
-        : undefined,
-    };
+    return { items, metadata: nextListingPage(listing, offset) };
   }
 
   async getSearchTags(): Promise<TagSection[]> {
@@ -211,19 +203,17 @@ export class AsuraScansExtension implements ExtensionImpl<typeof AsuraConfig> {
 
   async getSearchResults(
     query: SearchQuery<SearchMetadata>,
-    metadata: AsuraMetadata | undefined,
+    metadata: AsuraPaging | undefined,
     sortingOption: SortingOption | undefined,
   ): Promise<PagedResults<SearchResultItem>> {
-    const page = metadata?.page ?? 0;
+    const offset = metadata?.offset ?? 0;
     const listing = await fetchJSON<AsuraSearchResult>(
-      searchUrl(query, sortingOption, page * (metadata?.per_page ?? PAGE_SIZE), PAGE_SIZE),
+      searchUrl(query, sortingOption, offset, PAGE_SIZE),
     );
 
-    if (listing.data === null) return { items: [], metadata: undefined };
-
     return {
-      items: listing.data.map((manga) => toSearchResultItem(manga)),
-      metadata: listing.meta.has_more ? { page: page + 1 } : undefined,
+      items: (listing.data ?? []).map((manga) => toSearchResultItem(manga)),
+      metadata: nextListingPage(listing, offset),
     };
   }
 
