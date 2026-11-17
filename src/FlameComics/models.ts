@@ -263,6 +263,8 @@ export interface ChapterReaderResponse {
 
 export interface Metadata extends JSONObject {
   page: number;
+  /** Keeps a random sort in the same order from page to page. */
+  seed?: number;
 }
 
 /** The user's advanced-search selections, applied locally against the aggregate. */

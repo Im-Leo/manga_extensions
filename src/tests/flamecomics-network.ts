@@ -148,6 +148,41 @@ export function registerFlameNetworkTests(suite: TestSuite): void {
     );
   });
 
+  suite.test("catalog: a random sort keeps one order across pages", async () => {
+    const extension = new FlameComicsExtension();
+    const series = Array.from({ length: 250 }, (_, i) => makeSeries({ series_id: i + 1 }));
+    const routes: RouteTable = [
+      ["/latest.json", { body: { pageProps: { allSeries: series, keywordsMeta: "" } } }],
+      [
+        "/browse.json",
+        {
+          body: {
+            pageProps: {
+              series,
+              initialFilters: { year: [], search: "", status: [], types: [], order: "desc" },
+            },
+          },
+        },
+      ],
+      ["/api/series", { body: [] }],
+      [HOME, buildIds(BUILD_ID)],
+    ];
+    const random = { id: "random", label: "Random" };
+
+    await withFakeNetwork(routes, async () => {
+      const seen: string[] = [];
+      let metadata: Parameters<typeof extension.getSearchResults>[1];
+      do {
+        const page = await extension.getSearchResults({ title: "" }, metadata, random);
+        seen.push(...page.items.map((item) => item.mangaId));
+        metadata = page.metadata as typeof metadata;
+      } while (metadata);
+
+      expect(seen.length).to.equal(250);
+      expect(new Set(seen).size, "no title repeats across pages").to.equal(250);
+    });
+  });
+
   suite.test("catalog: search and its form share one catalog load", async () => {
     const extension = new FlameComicsExtension();
 

@@ -51,6 +51,7 @@ import {
   toSortableList,
 } from "./parsers";
 import type FlameComicsConfig from "./pbconfig";
+import { randomSeed, seededShuffle } from "./search";
 
 const SECTION_POPULAR = "popular";
 const SECTION_LATEST = "latest";
@@ -80,14 +81,6 @@ const COMPARATORS: Record<string, Comparator> = {
   likes: (a, b) => (b.likes ?? 0) - (a.likes ?? 0),
   year: (a, b) => (b.year ?? 0) - (a.year ?? 0),
 };
-
-/** Fisher-Yates, in place. */
-function shuffle(items: unknown[]): void {
-  for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j], items[i]];
-  }
-}
 
 export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsConfig> {
   private readonly rateLimiter = new BasicRateLimiter("rateLimiter", {
@@ -191,8 +184,9 @@ export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsCon
       candidates = applyAdvancedFilters(candidates, searchQuery.metadata, filters);
     }
 
+    const seed = metadata?.seed ?? randomSeed();
     if (sortingOption.id === "random") {
-      shuffle(candidates);
+      seededShuffle(candidates, seed);
     } else {
       const comparator = COMPARATORS[sortingOption.id];
       if (comparator) candidates.sort(comparator);
@@ -204,7 +198,10 @@ export class FlameComicsExtension implements ExtensionImpl<typeof FlameComicsCon
       .slice(startIndex, endIndex)
       .map((c) => toSearchResultItem(c, sortingOption));
 
-    return { items, metadata: endIndex < candidates.length ? { page: page + 1 } : undefined };
+    return {
+      items,
+      metadata: endIndex < candidates.length ? { page: page + 1, seed } : undefined,
+    };
   }
 
   async getAdvancedSearchForm(
