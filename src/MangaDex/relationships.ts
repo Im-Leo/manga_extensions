@@ -64,14 +64,16 @@ export function filterMangaRelationships<T extends { type?: string }>(
  */
 export function collectUniqueMangaIdsFromChapters(
   chapters: ReadonlyArray<ChapterData | undefined | null> | undefined,
+  alreadyShown: readonly string[] = [],
 ): { ids: string[]; chapterByMangaId: Map<string, ChapterData> } {
+  const shown = new Set(alreadyShown);
   const chapterByMangaId = new Map<string, ChapterData>();
   const ids: string[] = [];
   if (!Array.isArray(chapters)) return { ids, chapterByMangaId };
   for (const chapter of chapters) {
     if (!chapter) continue;
     const mangaId = findMangaRelationshipId(chapter.relationships);
-    if (!mangaId || chapterByMangaId.has(mangaId)) continue;
+    if (!mangaId || chapterByMangaId.has(mangaId) || shown.has(mangaId)) continue;
     chapterByMangaId.set(mangaId, chapter);
     ids.push(mangaId);
   }

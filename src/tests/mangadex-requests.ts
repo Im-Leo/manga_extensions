@@ -8,12 +8,39 @@ import { getSearchResults } from "../MangaDex/search.js";
 import { saveBlockedGroups, setGroupBlockingEnabled } from "../MangaDex/state/blocking.js";
 import { DISCOVER_SECTIONS } from "../MangaDex/state/discover.js";
 import { resetAllSettings } from "../MangaDex/state/reset.js";
+import { MANGA_PAGE_LIMIT } from "../MangaDex/utils.js";
 import { withFakeNetwork } from "./fakes/application.js";
 import type { TestSuite } from "./suite.js";
 
 const ALPHA = "11111111-1111-4111-8111-111111111111";
+const BETA = "22222222-2222-4222-8222-222222222222";
+const GAMMA = "33333333-3333-4333-8333-333333333333";
 const GROUP = "44444444-4444-4444-8444-444444444444";
 const EMPTY_LIST = { body: { data: [], total: 0, limit: 0, offset: 0 } };
+
+/** A full page of chapters, so paging continues, cycling through `mangaIds`. */
+function chapterPage(prefix: string, mangaIds: string[]) {
+  return {
+    body: {
+      data: Array.from({ length: MANGA_PAGE_LIMIT }, (_, i) => ({
+        id: `${prefix}${i}`,
+        attributes: { chapter: "1", readableAt: "2026-01-01T00:00:00Z" },
+        relationships: [{ id: mangaIds[i % mangaIds.length], type: "manga" }],
+      })),
+      total: 10 * MANGA_PAGE_LIMIT,
+    },
+  };
+}
+
+function mangaList(ids: string[]) {
+  return {
+    body: { data: ids.map((id) => ({ id, type: "manga", attributes: {}, relationships: [] })) },
+  };
+}
+
+function mangaIdsOf(items: readonly unknown[]): string[] {
+  return items.map((item) => (item as { mangaId: string }).mangaId);
+}
 
 /** What MangaDex asks the API for, checked from the requests a flow actually makes. */
 export function registerMangaDexRequestTests(suite: TestSuite): void {
@@ -39,6 +66,28 @@ export function registerMangaDexRequestTests(suite: TestSuite): void {
       }
     },
   );
+
+  suite.test("discover: Latest Updates shows each title once across pages", async () => {
+    const latest = { id: DISCOVER_SECTIONS.LATEST_UPDATES, title: "Latest", type: 0 } as never;
+
+    await withFakeNetwork(
+      [
+        [/chapter\?.*offset=0&/, chapterPage("a", [ALPHA, BETA])],
+        [/chapter\?/, chapterPage("b", [BETA, GAMMA])],
+        [
+          "/manga?",
+          (request) => mangaList([ALPHA, BETA, GAMMA].filter((id) => request.url.includes(id))),
+        ],
+      ],
+      async () => {
+        const first = await getDiscoverSectionItems(latest, undefined);
+        const second = await getDiscoverSectionItems(latest, first.metadata as never);
+
+        expect(mangaIdsOf(first.items)).to.deep.equal([ALPHA, BETA]);
+        expect(mangaIdsOf(second.items), "BETA was already shown").to.deep.equal([GAMMA]);
+      },
+    );
+  });
 
   suite.test("search: an exact id lookup ignores the language filter", async () => {
     await withFakeNetwork([["/manga?", EMPTY_LIST]], async (network) => {

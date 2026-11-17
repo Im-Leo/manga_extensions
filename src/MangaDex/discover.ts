@@ -36,6 +36,7 @@ import {
   MANGA_PAGE_LIMIT,
   chunk,
   computeNextMetadata,
+  rememberShown,
   formatCreatedAtSince,
   parseDateOrEpoch,
   reorderById,
@@ -275,12 +276,18 @@ async function getLatestUpdatesItems(
     MANGA_PAGE_LIMIT,
   );
 
+  const shown = metadata?.shownMangaIds ?? [];
   const { ids: orderedMangaIds, chapterByMangaId } = collectUniqueMangaIdsFromChapters(
     chaptersResponse.data,
+    shown,
   );
+  const nextPage = nextMetadata && {
+    ...nextMetadata,
+    shownMangaIds: rememberShown(shown, orderedMangaIds),
+  };
 
   if (orderedMangaIds.length === 0) {
-    return { items: [], metadata: nextMetadata };
+    return { items: [], metadata: nextPage };
   }
 
   const mangaResponse = await fetchJSON<SearchResponse>({
@@ -325,7 +332,7 @@ async function getLatestUpdatesItems(
 
   return {
     items: carouselItems,
-    metadata: nextMetadata,
+    metadata: nextPage,
   };
 }
 

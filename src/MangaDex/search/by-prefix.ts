@@ -8,7 +8,7 @@ import type { ChapterResponse, Metadata } from "../models";
 import { fetchJSON } from "../network";
 import { collectUniqueMangaIdsFromChapters } from "../relationships";
 import { buildLatestChaptersUrl } from "../urls";
-import { computeNextMetadata, MANGA_PAGE_LIMIT } from "../utils";
+import { computeNextMetadata, MANGA_PAGE_LIMIT, rememberShown } from "../utils";
 import { fetchAndEnrichOrderedMangaIds } from "./fetchers";
 
 /**
@@ -26,6 +26,7 @@ export async function searchByUploader(
   languages: string[],
 ): Promise<PagedResults<SearchResultItem>> {
   let offset = metadata?.offset ?? 0;
+  let shown = metadata?.shownMangaIds ?? [];
 
   for (let attempt = 0; attempt < UPLOADER_FETCH_PAGE_CAP; attempt++) {
     const chaptersResponse = await fetchJSON<ChapterResponse>({
@@ -55,17 +56,18 @@ export async function searchByUploader(
       return { items: [], metadata: nextMetadata };
     }
 
-    const { ids: orderedMangaIds } = collectUniqueMangaIdsFromChapters(chapters);
+    const { ids: orderedMangaIds } = collectUniqueMangaIdsFromChapters(chapters, shown);
+    shown = rememberShown(shown, orderedMangaIds);
 
     const items = await fetchAndEnrichOrderedMangaIds(orderedMangaIds, ratings, languages);
     if (items.length > 0 || nextMetadata === undefined) {
-      return { items, metadata: nextMetadata };
+      return { items, metadata: nextMetadata && { ...nextMetadata, shownMangaIds: shown } };
     }
 
     offset = nextMetadata.offset ?? offset + MANGA_PAGE_LIMIT;
   }
 
-  return { items: [], metadata: { offset } };
+  return { items: [], metadata: { offset, shownMangaIds: shown } };
 }
 
 const LIST_FETCH_PAGE_CAP = 3;

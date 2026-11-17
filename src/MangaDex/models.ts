@@ -208,6 +208,8 @@ export enum RelationshipType {
 export interface Metadata extends JSONObject {
   offset?: number;
   listMangaIds?: string[];
+  /** Titles earlier pages of a chapter feed already showed, newest last. */
+  shownMangaIds?: string[];
 }
 
 export interface StatisticsResponse {

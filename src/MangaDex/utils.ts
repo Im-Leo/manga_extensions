@@ -43,6 +43,14 @@ export function reorderById<T extends { id: string }>(
   });
 }
 
+/** Enough to cover any scroll a reader makes, bounded because it rides along in every page's metadata. */
+const SHOWN_IDS_CAP = 1000;
+
+/** The titles shown so far, for the next page of a chapter feed to leave out. */
+export function rememberShown(shown: readonly string[], added: readonly string[]): string[] {
+  return [...shown, ...added].slice(-SHOWN_IDS_CAP);
+}
+
 /** Undefined ends paging: a short page, the total reached, or the offset cap. */
 export function computeNextMetadata(
   offset: number,
