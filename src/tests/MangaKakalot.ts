@@ -31,7 +31,7 @@ import {
   searchTitle,
   searchUrl,
 } from "../MangaKakalot/urls.js";
-import { UNRATED_LISTING_DEFAULT } from "../utils/content-rating.js";
+import { ContentRatingCache, UNRATED_LISTING_DEFAULT } from "../utils/content-rating.js";
 import { rejectionOf } from "./async.js";
 import {
   assertDiscoverSectionItem,
@@ -110,11 +110,15 @@ function registerOfflineTests(suite: TestSuite): void {
 
   suite.test("parseDiscoverSectionItems: maps every entry and honors section type", async () => {
     const $ = cheerio.load(LISTING_HTML);
-    const items = parseDiscoverSectionItems($, {
-      id: "most_popular",
-      title: "Most Popular",
-      type: DiscoverSectionType.simpleCarousel,
-    });
+    const items = parseDiscoverSectionItems(
+      $,
+      {
+        id: "most_popular",
+        title: "Most Popular",
+        type: DiscoverSectionType.simpleCarousel,
+      },
+      new ContentRatingCache(),
+    );
 
     expect(items).to.have.lengthOf(3);
     items.forEach((item, index) => assertDiscoverSectionItem(item, `item ${index}`));
@@ -125,11 +129,15 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("parseDiscoverSectionItems: update tiles open their latest chapter", async () => {
-    const items = parseDiscoverSectionItems(cheerio.load(LISTING_HTML), {
-      id: "latest_updates",
-      title: "Latest Updates",
-      type: DiscoverSectionType.chapterUpdates,
-    });
+    const items = parseDiscoverSectionItems(
+      cheerio.load(LISTING_HTML),
+      {
+        id: "latest_updates",
+        title: "Latest Updates",
+        type: DiscoverSectionType.chapterUpdates,
+      },
+      new ContentRatingCache(),
+    );
 
     const chapterIds = items.map((item) => (item as { chapterId?: string }).chapterId);
     expect(chapterIds).to.deep.equal(["chapter-12", "chapter-3", ""]);
@@ -151,11 +159,15 @@ function registerOfflineTests(suite: TestSuite): void {
 
   suite.test("parseDiscoverSectionItems: featured items expose a supertitle", async () => {
     const $ = cheerio.load(LISTING_HTML);
-    const [item] = parseDiscoverSectionItems($, {
-      id: "new_titles",
-      title: "New Titles",
-      type: DiscoverSectionType.featured,
-    });
+    const [item] = parseDiscoverSectionItems(
+      $,
+      {
+        id: "new_titles",
+        title: "New Titles",
+        type: DiscoverSectionType.featured,
+      },
+      new ContentRatingCache(),
+    );
 
     expect(item?.type).to.equal("featuredCarouselItem");
     expect(item && "supertitle" in item ? item.supertitle : undefined).to.equal("Chapter 12");
@@ -163,11 +175,15 @@ function registerOfflineTests(suite: TestSuite): void {
 
   suite.test("image sources: data-src wins, relative and http are normalized", async () => {
     const $ = cheerio.load(LISTING_HTML);
-    const items = parseDiscoverSectionItems($, {
-      id: "most_popular",
-      title: "Most Popular",
-      type: DiscoverSectionType.simpleCarousel,
-    });
+    const items = parseDiscoverSectionItems(
+      $,
+      {
+        id: "most_popular",
+        title: "Most Popular",
+        type: DiscoverSectionType.simpleCarousel,
+      },
+      new ContentRatingCache(),
+    );
 
     const tiles = items.filter(isMangaTile);
     expect(tiles[0]?.imageUrl).to.equal("https://img-r1.2xstorage.com/thumb/alpha.webp");
@@ -177,11 +193,15 @@ function registerOfflineTests(suite: TestSuite): void {
 
   suite.test("parseDiscoverSectionItems: drops entries with no id or title", async () => {
     const $ = cheerio.load(LISTING_WITH_INVALID_ENTRY_HTML);
-    const items = parseDiscoverSectionItems($, {
-      id: "most_popular",
-      title: "Most Popular",
-      type: DiscoverSectionType.simpleCarousel,
-    });
+    const items = parseDiscoverSectionItems(
+      $,
+      {
+        id: "most_popular",
+        title: "Most Popular",
+        type: DiscoverSectionType.simpleCarousel,
+      },
+      new ContentRatingCache(),
+    );
 
     expect(items).to.have.lengthOf(1);
     expect(items.find(isMangaTile)?.mangaId).to.equal("valid-one");
@@ -194,7 +214,7 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("parseSearchResults: title search uses the story template", async () => {
-    const results = parseSearchResults(cheerio.load(SEARCH_HTML), true);
+    const results = parseSearchResults(cheerio.load(SEARCH_HTML), true, new ContentRatingCache());
 
     expect(results).to.have.lengthOf(1);
     assertSearchResultItem(results[0]!, "search result");
@@ -205,14 +225,18 @@ function registerOfflineTests(suite: TestSuite): void {
   suite.test("parseSearchResults: genre browse reuses the listing template", async () => {
     // This site exposes no genres on listing pages, and an unrated tile reads as
     // safe to Paperback, so unknown must resolve to something that still blurs.
-    const results = parseSearchResults(cheerio.load(LISTING_HTML), false);
+    const results = parseSearchResults(cheerio.load(LISTING_HTML), false, new ContentRatingCache());
 
     expect(results).to.have.lengthOf(3);
     results.forEach((result, index) => assertSearchResultItem(result, `genre result ${index}`));
   });
 
   suite.test("parseMangaDetails: extracts every field", async () => {
-    const manga = parseMangaDetails(cheerio.load(DETAIL_HTML), "detailed-title");
+    const manga = parseMangaDetails(
+      cheerio.load(DETAIL_HTML),
+      "detailed-title",
+      new ContentRatingCache(),
+    );
     assertSourceManga(manga, "detail");
 
     const info = manga.mangaInfo;
@@ -226,17 +250,25 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("parseMangaDetails: an adult genre raises the content rating", async () => {
-    const adult = parseMangaDetails(cheerio.load(DETAIL_HTML), "detailed-title");
+    const adult = parseMangaDetails(
+      cheerio.load(DETAIL_HTML),
+      "detailed-title",
+      new ContentRatingCache(),
+    );
     expect(adult.mangaInfo.contentRating, "smut must map to ADULT").to.equal(ContentRating.ADULT);
 
-    const safe = parseMangaDetails(cheerio.load(DETAIL_SAFE_HTML), "safe-title");
+    const safe = parseMangaDetails(
+      cheerio.load(DETAIL_SAFE_HTML),
+      "safe-title",
+      new ContentRatingCache(),
+    );
     expect(safe.mangaInfo.contentRating, "no adult genre stays EVERYONE").to.equal(
       ContentRating.EVERYONE,
     );
   });
 
   suite.test("content rating: listing tiles default to the conservative rating", async () => {
-    const results = parseSearchResults(cheerio.load(LISTING_HTML), false);
+    const results = parseSearchResults(cheerio.load(LISTING_HTML), false, new ContentRatingCache());
 
     expect(results.length, "fixture has entries").to.be.greaterThan(0);
     for (const item of results) {
@@ -248,14 +280,24 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("content rating: browsing a genre rates every tile on the page", async () => {
-    const adult = parseSearchResults(cheerio.load(LISTING_HTML), false, "adult");
+    const adult = parseSearchResults(
+      cheerio.load(LISTING_HTML),
+      false,
+      new ContentRatingCache(),
+      "adult",
+    );
     for (const item of adult) {
       expect(item.contentRating, `${item.mangaId} from an adult genre`).to.equal(
         ContentRating.ADULT,
       );
     }
 
-    const comedy = parseSearchResults(cheerio.load(LISTING_HTML), false, "comedy");
+    const comedy = parseSearchResults(
+      cheerio.load(LISTING_HTML),
+      false,
+      new ContentRatingCache(),
+      "comedy",
+    );
     for (const item of comedy) {
       expect(item.contentRating, "a safe genre does not assert safety").to.not.equal(
         ContentRating.EVERYONE,
@@ -264,14 +306,15 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("content rating: a rating learned from details reaches later tiles", async () => {
-    const before = parseSearchResults(cheerio.load(LISTING_HTML), false).find(
+    const ratings = new ContentRatingCache();
+    const before = parseSearchResults(cheerio.load(LISTING_HTML), false, ratings).find(
       (item) => item.mangaId === "alpha-title",
     );
     expect(before?.contentRating, "not yet known").to.equal(UNRATED_LISTING_DEFAULT);
 
-    parseMangaDetails(cheerio.load(DETAIL_SAFE_HTML), "alpha-title");
+    parseMangaDetails(cheerio.load(DETAIL_SAFE_HTML), "alpha-title", ratings);
 
-    const after = parseSearchResults(cheerio.load(LISTING_HTML), false).find(
+    const after = parseSearchResults(cheerio.load(LISTING_HTML), false, ratings).find(
       (item) => item.mangaId === "alpha-title",
     );
     expect(after?.contentRating, "learned from the detail page").to.equal(ContentRating.EVERYONE);

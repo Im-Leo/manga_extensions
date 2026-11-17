@@ -1,20 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
-import {
-  ContentRating,
-  type Chapter,
-  type SourceManga,
-  type Tag,
-  type TagSection,
-} from "@paperback/types";
+import type { Chapter, ContentRating, SourceManga, Tag, TagSection } from "@paperback/types";
 import type { CheerioAPI } from "cheerio";
 
-import { ContentRatingCache, rateContent } from "../utils/content-rating";
+import { rateContent, type ContentRatingCache } from "../utils/content-rating";
 import { normalizeRating } from "../utils/rating";
-
-/** Listing markup carries no genres, so tiles default until a detail page teaches this. */
-const ratings = new ContentRatingCache();
 
 /**
  * The site ships two listing templates differing only in class prefix and where
@@ -60,13 +51,12 @@ export function parseListing(
   $: CheerioAPI,
   layout: ListingLayout,
   seenIds: string[],
+  ratings: ContentRatingCache,
   browsedGenre?: string,
 ): ListingEntry[] {
   const entries: ListingEntry[] = [];
   // The carried list grows by a page of ids each page; a set keeps each check constant.
   const seen = new Set(seenIds);
-
-  const fromGenre = browsedGenre ? rateContent([browsedGenre]) : ContentRating.EVERYONE;
 
   $(layout.item).each((_, element) => {
     const link = $(layout.link, element).first();
@@ -83,7 +73,7 @@ export function parseListing(
       title,
       imageUrl,
       subtitle: $(layout.subtitle, element).first().text().trim(),
-      contentRating: fromGenre === ContentRating.EVERYONE ? ratings.recall(mangaId) : fromGenre,
+      contentRating: ratings.rateListing(mangaId, browsedGenre),
     });
   });
 
@@ -105,7 +95,11 @@ export function parseNextPage($: CheerioAPI, currentPage: number): number | unde
   return explicitPage ? Number.parseInt(explicitPage, 10) : currentPage + 1;
 }
 
-export function parseMangaDetails($: CheerioAPI, mangaId: string): SourceManga {
+export function parseMangaDetails(
+  $: CheerioAPI,
+  mangaId: string,
+  ratings: ContentRatingCache,
+): SourceManga {
   const section = $(".detail-info");
 
   const tags: Tag[] = [];

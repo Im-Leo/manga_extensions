@@ -21,6 +21,7 @@ import {
 import type { CheerioAPI } from "cheerio";
 
 import { TtlCache } from "../utils/cache";
+import { ContentRatingCache } from "../utils/content-rating";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor";
 import { fetchCheerio, fetchTitlePage } from "../utils/network";
 import { MangaFoxAdvancedSearchForm } from "./forms/search";
@@ -70,6 +71,9 @@ export class MangaFoxExtension implements ExtensionImpl<typeof MangaFoxConfig> {
    */
   private readonly detailPages = new TtlCache<string, CheerioAPI>(DETAIL_PAGE_TTL_MS, 4);
 
+  /** Listing markup carries no genres, so tiles default until a detail page teaches this. */
+  private readonly ratings = new ContentRatingCache();
+
   async initialise(): Promise<void> {
     this.rateLimiter.registerInterceptor();
     this.interceptor.registerInterceptor();
@@ -115,18 +119,20 @@ export class MangaFoxExtension implements ExtensionImpl<typeof MangaFoxConfig> {
     switch (section.id) {
       case SECTION_HOT: {
         const $ = await fetchCheerio(DOMAIN);
-        return { items: toDiscoverItems(parseListing($, LAYOUT_COMPACT, seenIds), section) };
+        return {
+          items: toDiscoverItems(parseListing($, LAYOUT_COMPACT, seenIds, this.ratings), section),
+        };
       }
 
       case SECTION_NEW: {
         const $ = await fetchCheerio(directoryUrl(page));
-        const items = parseListing($, LAYOUT_COMPACT_WITH_CHAPTER, seenIds);
+        const items = parseListing($, LAYOUT_COMPACT_WITH_CHAPTER, seenIds, this.ratings);
         return { items: toDiscoverItems(items, section), metadata: nextMetadata($, page, seenIds) };
       }
 
       case SECTION_LATEST: {
         const $ = await fetchCheerio(releasesUrl(page));
-        const items = parseListing($, LAYOUT_DETAILED, seenIds);
+        const items = parseListing($, LAYOUT_DETAILED, seenIds, this.ratings);
         return { items: toDiscoverItems(items, section), metadata: nextMetadata($, page, seenIds) };
       }
 
@@ -153,13 +159,13 @@ export class MangaFoxExtension implements ExtensionImpl<typeof MangaFoxConfig> {
     const $ = await fetchCheerio(searchUrl(query.title, genre, page));
 
     return {
-      items: parseListing($, LAYOUT_DETAILED, seenIds, genreTitle),
+      items: parseListing($, LAYOUT_DETAILED, seenIds, this.ratings, genreTitle),
       metadata: nextMetadata($, page, seenIds),
     };
   }
 
   async getMangaDetails(mangaId: string): Promise<SourceManga> {
-    return parseMangaDetails(await this.detailPage(mangaId), mangaId);
+    return parseMangaDetails(await this.detailPage(mangaId), mangaId, this.ratings);
   }
 
   async getChapters(sourceManga: SourceManga): Promise<Chapter[]> {

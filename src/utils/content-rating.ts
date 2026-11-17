@@ -145,6 +145,16 @@ export class ContentRatingCache {
     return this.ratings.has(mangaId);
   }
 
+  /**
+   * A listing tile's rating. Every title on a genre page carries that genre, so a genre that
+   * raises the rating rates the whole page; a safe genre says nothing about the title's others,
+   * so it falls back to what detail pages taught.
+   */
+  rateListing(mangaId: string, browsedGenre?: string): ContentRating {
+    const fromGenre = browsedGenre ? rateContent([browsedGenre]) : ContentRating.EVERYONE;
+    return fromGenre === ContentRating.EVERYONE ? this.recall(mangaId) : fromGenre;
+  }
+
   /** The learned rating, or `fallback` for a title never opened. */
   recall(mangaId: string, fallback: ContentRating = UNRATED_LISTING_DEFAULT): ContentRating {
     this.load();

@@ -2,9 +2,9 @@
 /* Copyright © 2026 Im-Leo */
 
 import {
-  ContentRating,
   DiscoverSectionType,
   type Chapter,
+  type ContentRating,
   type ChapterDetails,
   type DiscoverSection,
   type DiscoverSectionItem,
@@ -16,16 +16,9 @@ import {
 import type { Cheerio, CheerioAPI } from "cheerio";
 import type { Element } from "domhandler";
 
-import { ContentRatingCache, rateContent } from "../utils/content-rating";
+import { rateContent, type ContentRatingCache } from "../utils/content-rating";
 import { normalizeRating } from "../utils/rating";
 import { DOMAIN, LANGUAGE, type ApiChapter, type ChapterListResponse } from "./models";
-
-/**
- * Listing markup carries no genres, so tiles default until a detail page teaches
- * this. Persisted: resolving a listing costs one request per tile, and without
- * it every app launch pays that again.
- */
-const ratings = new ContentRatingCache("content_ratings");
 
 /** Every listing page — discover and genre browse alike — uses this wrapper. */
 const LISTING_ITEM = "div.list-comic-item-wrap";
@@ -39,7 +32,11 @@ const DETAIL_ROOT = "div.main-wrapper";
 /** Lazy-loading attributes in the order the site fills them; `srcset` needs splitting. */
 const IMAGE_ATTRIBUTES = ["data-src", "data-lazy-src", "srcset", "src", "data-cfsrc"];
 
-export function parseMangaDetails($: CheerioAPI, mangaId: string): SourceManga {
+export function parseMangaDetails(
+  $: CheerioAPI,
+  mangaId: string,
+  ratings: ContentRatingCache,
+): SourceManga {
   const title = $("img", DETAIL_ROOT).attr("alt")?.trim() ?? "";
   const thumbnailUrl = resolveImageUrl($("img", DETAIL_ROOT));
 
@@ -162,10 +159,11 @@ export function parseChapterDetails($: CheerioAPI, chapter: Chapter): ChapterDet
 export function parseDiscoverSectionItems(
   $: CheerioAPI,
   section: DiscoverSection,
+  ratings: ContentRatingCache,
 ): DiscoverSectionItem[] {
   const items: DiscoverSectionItem[] = [];
 
-  for (const { entry, chapterId } of parseListing($)) {
+  for (const { entry, chapterId } of parseListing($, ratings)) {
     switch (section.type) {
       case DiscoverSectionType.featured:
         items.push({ ...entry, supertitle: entry.subtitle, type: "featuredCarouselItem" });
@@ -188,9 +186,10 @@ export function parseDiscoverSectionItems(
 export function parseSearchResults(
   $: CheerioAPI,
   isTitleSearch: boolean,
+  ratings: ContentRatingCache,
   browsedGenre?: string,
 ): SearchResultItem[] {
-  if (!isTitleSearch) return listingEntries($, browsedGenre);
+  if (!isTitleSearch) return listingEntries($, ratings, browsedGenre);
 
   const results: SearchResultItem[] = [];
 
@@ -250,8 +249,12 @@ interface ListingEntry {
   contentRating: ContentRating;
 }
 
-function listingEntries($: CheerioAPI, browsedGenre?: string): ListingEntry[] {
-  return parseListing($, browsedGenre).map(({ entry }) => entry);
+function listingEntries(
+  $: CheerioAPI,
+  ratings: ContentRatingCache,
+  browsedGenre?: string,
+): ListingEntry[] {
+  return parseListing($, ratings, browsedGenre).map(({ entry }) => entry);
 }
 
 /** A tile's latest-chapter link is `/manga/<mangaId>/<chapterId>`; "" when it has no such link. */
@@ -261,13 +264,10 @@ function chapterIdOf(href: string | undefined): string {
 
 function parseListing(
   $: CheerioAPI,
+  ratings: ContentRatingCache,
   browsedGenre?: string,
 ): { entry: ListingEntry; chapterId: string }[] {
   const entries: { entry: ListingEntry; chapterId: string }[] = [];
-
-  // Every title on /genre/<x> carries that genre, so it rates the whole page. Only
-  // a rating it raises applies: a safe genre leaves the other genres unknown.
-  const fromGenre = browsedGenre ? rateContent([browsedGenre]) : ContentRating.EVERYONE;
 
   for (const node of $(LISTING_ITEM).toArray()) {
     const mangaId = cleanId($("a", node).attr("href") ?? "");
@@ -281,7 +281,7 @@ function parseListing(
         title: Application.decodeHTMLEntities(title),
         subtitle: Application.decodeHTMLEntities(chapterLink.text().trim()),
         imageUrl: resolveImageUrl($("img", node)),
-        contentRating: fromGenre === ContentRating.EVERYONE ? ratings.recall(mangaId) : fromGenre,
+        contentRating: ratings.rateListing(mangaId, browsedGenre),
       },
       chapterId: chapterIdOf(chapterLink.attr("href")),
     });
@@ -339,7 +339,10 @@ function cleanId(href: string): string {
  * Discover items are a union whose genres member has no `mangaId`; those pass
  * through untouched rather than being filtered out by the caller.
  */
-export function applyLearnedRatings<T extends { contentRating?: ContentRating }>(items: T[]): T[] {
+export function applyLearnedRatings<T extends { contentRating?: ContentRating }>(
+  items: T[],
+  ratings: ContentRatingCache,
+): T[] {
   return items.map((item) =>
     hasMangaId(item) ? { ...item, contentRating: ratings.recall(item.mangaId) } : item,
   );
@@ -358,6 +361,3 @@ function hasMangaId(item: unknown): item is { mangaId: string } {
     typeof item.mangaId === "string"
   );
 }
-
-/** The cache behind {@link applyLearnedRatings}; filled by the extension's `RatingResolver`. */
-export const ratingCache = ratings;

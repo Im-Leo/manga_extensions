@@ -23,7 +23,7 @@ import {
 } from "../MangaFox/parsers.js";
 import sourceInfo from "../MangaFox/pbconfig.js";
 import { chapterUrl, directoryUrl, mangaUrl, releasesUrl, searchUrl } from "../MangaFox/urls.js";
-import { UNRATED_LISTING_DEFAULT } from "../utils/content-rating.js";
+import { ContentRatingCache, UNRATED_LISTING_DEFAULT } from "../utils/content-rating.js";
 import { rejectionOf } from "./async.js";
 import { assertDiscoverSectionItem, assertSourceManga } from "./contracts.js";
 import { withFakeNetwork } from "./fakes/application.js";
@@ -59,7 +59,12 @@ function registerOfflineTests(suite: TestSuite): void {
   suite.test("parseListing: compact layout", async () => {
     // Listing markup here carries title, cover, chapter and a star score, but no
     // genres, so unknown must resolve to something that still blurs.
-    const entries = parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, []);
+    const entries = parseListing(
+      cheerio.load(COMPACT_LISTING_HTML),
+      LAYOUT_COMPACT,
+      [],
+      new ContentRatingCache(),
+    );
 
     expect(entries).to.have.lengthOf(2);
     expect(entries[0]).to.deep.include({
@@ -81,20 +86,34 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("covers: http and protocol-relative sources are upgraded to https", async () => {
-    const entries = parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, []);
+    const entries = parseListing(
+      cheerio.load(COMPACT_LISTING_HTML),
+      LAYOUT_COMPACT,
+      [],
+      new ContentRatingCache(),
+    );
     expect(entries.map((entry) => entry.imageUrl)).to.deep.equal([
       "https://fmcdn.mfcdn.net/store/manga/1/cover.jpg?token=a",
       "https://fmcdn.mfcdn.net/store/manga/2/cover.jpg?token=b",
     ]);
 
-    const detail = parseMangaDetails(cheerio.load(DETAIL_SAFE_HTML), "safe_title");
+    const detail = parseMangaDetails(
+      cheerio.load(DETAIL_SAFE_HTML),
+      "safe_title",
+      new ContentRatingCache(),
+    );
     expect(detail.mangaInfo.thumbnailUrl).to.equal(
       "https://fmcdn.mfcdn.net/store/manga/9/cover.jpg?token=z",
     );
   });
 
   suite.test("parseListing: detailed layout takes the first part as subtitle", async () => {
-    const entries = parseListing(cheerio.load(DETAILED_LISTING_HTML), LAYOUT_DETAILED, []);
+    const entries = parseListing(
+      cheerio.load(DETAILED_LISTING_HTML),
+      LAYOUT_DETAILED,
+      [],
+      new ContentRatingCache(),
+    );
 
     expect(entries).to.have.lengthOf(1);
     expect(entries[0]?.mangaId).to.equal("third_title");
@@ -102,7 +121,12 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("content rating: listing tiles default to the conservative rating", async () => {
-    const entries = parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, []);
+    const entries = parseListing(
+      cheerio.load(COMPACT_LISTING_HTML),
+      LAYOUT_COMPACT,
+      [],
+      new ContentRatingCache(),
+    );
 
     expect(entries.length, "fixture has entries").to.be.greaterThan(0);
     for (const entry of entries) {
@@ -113,31 +137,54 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("content rating: browsing a genre rates every tile on the page", async () => {
-    const adult = parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, [], "Adult");
+    const adult = parseListing(
+      cheerio.load(COMPACT_LISTING_HTML),
+      LAYOUT_COMPACT,
+      [],
+      new ContentRatingCache(),
+      "Adult",
+    );
     for (const entry of adult) {
       expect(entry.contentRating).to.equal(ContentRating.ADULT);
     }
 
-    const comedy = parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, [], "Comedy");
+    const comedy = parseListing(
+      cheerio.load(COMPACT_LISTING_HTML),
+      LAYOUT_COMPACT,
+      [],
+      new ContentRatingCache(),
+      "Comedy",
+    );
     for (const entry of comedy) {
       expect(entry.contentRating, "must not assert safety").to.not.equal(ContentRating.EVERYONE);
     }
   });
 
   suite.test("content rating: a rating learned from details reaches later tiles", async () => {
-    const before = parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, [])[0];
+    const ratings = new ContentRatingCache();
+    const before = parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, [], ratings)[0];
     expect(before?.contentRating, "not yet known").to.equal(UNRATED_LISTING_DEFAULT);
 
-    parseMangaDetails(cheerio.load(DETAIL_SAFE_HTML), before?.mangaId ?? "");
+    parseMangaDetails(cheerio.load(DETAIL_SAFE_HTML), before?.mangaId ?? "", ratings);
 
-    const after = parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, [])[0];
+    const after = parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, [], ratings)[0];
     expect(after?.contentRating, "learned from the detail page").to.equal(ContentRating.EVERYONE);
   });
 
   suite.test("parseListing: de-duplicates across pages via seenIds", async () => {
     const seenIds: string[] = [];
-    const first = parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, seenIds);
-    const second = parseListing(cheerio.load(COMPACT_LISTING_HTML), LAYOUT_COMPACT, seenIds);
+    const first = parseListing(
+      cheerio.load(COMPACT_LISTING_HTML),
+      LAYOUT_COMPACT,
+      seenIds,
+      new ContentRatingCache(),
+    );
+    const second = parseListing(
+      cheerio.load(COMPACT_LISTING_HTML),
+      LAYOUT_COMPACT,
+      seenIds,
+      new ContentRatingCache(),
+    );
 
     expect(first).to.have.lengthOf(2);
     expect(second, "already-seen entries must be suppressed").to.have.lengthOf(0);
@@ -145,7 +192,12 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("parseListing: drops entries with no cover", async () => {
-    const entries = parseListing(cheerio.load(LISTING_MISSING_COVER_HTML), LAYOUT_DETAILED, []);
+    const entries = parseListing(
+      cheerio.load(LISTING_MISSING_COVER_HTML),
+      LAYOUT_DETAILED,
+      [],
+      new ContentRatingCache(),
+    );
     expect(entries).to.have.lengthOf(0);
   });
 
@@ -158,7 +210,11 @@ function registerOfflineTests(suite: TestSuite): void {
   });
 
   suite.test("parseMangaDetails: extracts every field", async () => {
-    const manga = parseMangaDetails(cheerio.load(DETAIL_SAFE_HTML), "safe_title");
+    const manga = parseMangaDetails(
+      cheerio.load(DETAIL_SAFE_HTML),
+      "safe_title",
+      new ContentRatingCache(),
+    );
     assertSourceManga(manga, "detail");
 
     const info = manga.mangaInfo;
@@ -171,17 +227,20 @@ function registerOfflineTests(suite: TestSuite): void {
 
   suite.test("parseMangaDetails: rating comes from the title's own tags", async () => {
     expect(
-      parseMangaDetails(cheerio.load(DETAIL_SAFE_HTML), "safe").mangaInfo.contentRating,
+      parseMangaDetails(cheerio.load(DETAIL_SAFE_HTML), "safe", new ContentRatingCache()).mangaInfo
+        .contentRating,
       "Comedy/Romance must not be ADULT",
     ).to.equal(ContentRating.EVERYONE);
 
     expect(
-      parseMangaDetails(cheerio.load(DETAIL_MATURE_HTML), "mature").mangaInfo.contentRating,
+      parseMangaDetails(cheerio.load(DETAIL_MATURE_HTML), "mature", new ContentRatingCache())
+        .mangaInfo.contentRating,
       "Ecchi is MATURE",
     ).to.equal(ContentRating.MATURE);
 
     expect(
-      parseMangaDetails(cheerio.load(DETAIL_ADULT_HTML), "adult").mangaInfo.contentRating,
+      parseMangaDetails(cheerio.load(DETAIL_ADULT_HTML), "adult", new ContentRatingCache())
+        .mangaInfo.contentRating,
       "Adult outranks MATURE",
     ).to.equal(ContentRating.ADULT);
   });

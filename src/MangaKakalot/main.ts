@@ -21,7 +21,7 @@ import {
 } from "@paperback/types";
 
 import { TtlCache } from "../utils/cache";
-import { RatingResolver } from "../utils/content-rating";
+import { ContentRatingCache, RatingResolver } from "../utils/content-rating";
 import { SiteInterceptor, persistCloudflareCookies } from "../utils/interceptor";
 import { fetchCheerio, fetchJSON, fetchTitlePage } from "../utils/network";
 import { MangaKakalotAdvancedSearchForm } from "./forms/search";
@@ -42,7 +42,6 @@ import {
   parseMangaDetails,
   parseSearchResults,
   ratableIds,
-  ratingCache,
 } from "./parsers";
 import type MangaKakalotConfig from "./pbconfig";
 import {
@@ -79,7 +78,14 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
 
   private readonly genres = new TtlCache<string, TagSection>(GENRES_TTL_MS, 1);
 
-  private readonly ratingResolver = new RatingResolver(ratingCache, (mangaId) =>
+  /**
+   * Listing markup carries no genres, so tiles default until a detail page teaches
+   * this. Persisted: resolving a listing costs one request per tile, and without
+   * it every app launch pays that again.
+   */
+  private readonly ratings = new ContentRatingCache("content_ratings");
+
+  private readonly ratingResolver = new RatingResolver(this.ratings, (mangaId) =>
     this.getMangaDetails(mangaId),
   );
 
@@ -112,7 +118,7 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
     const $ = await fetchCheerio(listingUrl(definition.path, page));
 
     return {
-      items: await this.withRealRatings(parseDiscoverSectionItems($, section)),
+      items: await this.withRealRatings(parseDiscoverSectionItems($, section, this.ratings)),
       metadata: isLastPage($) ? undefined : { page: page + 1 },
     };
   }
@@ -136,7 +142,12 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
 
     return {
       items: await this.withRealRatings(
-        parseSearchResults($, searchTitle(query).length > 0, query.metadata?.genres?.[0]),
+        parseSearchResults(
+          $,
+          searchTitle(query).length > 0,
+          this.ratings,
+          query.metadata?.genres?.[0],
+        ),
       ),
       metadata: isLastPage($) ? undefined : { page: page + 1 },
     };
@@ -153,13 +164,14 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
   ): Promise<T[]> {
     await this.ratingResolver.resolve(ratableIds(items));
 
-    return applyLearnedRatings(items);
+    return applyLearnedRatings(items, this.ratings);
   }
 
   async getMangaDetails(mangaId: string): Promise<SourceManga> {
     return parseMangaDetails(
       await fetchTitlePage(mangaUrl(mangaId), "MangaKakalot", "kakamanga.com"),
       mangaId,
+      this.ratings,
     );
   }
 
