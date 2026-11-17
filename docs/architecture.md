@@ -16,16 +16,17 @@ Every extension follows the same layering:
 | ------------- | ------------------------------------------------- |
 | `pbconfig.ts` | manifest only                                     |
 | `models.ts`   | domain types and site constants                   |
-| `network.ts`  | interceptor and request helpers                   |
+| `network.ts`  | request helpers, where a source needs its own     |
 | `parsers.ts`  | raw HTML/JSON into Paperback domain objects       |
 | `reader.ts`   | page-image extraction, where a site obfuscates it |
 | `urls.ts`     | one named builder per endpoint                    |
 | `forms/`      | settings and advanced-search forms                |
 | `main.ts`     | the `ExtensionImpl`, wiring only                  |
 
-`main.ts` reads as a table of contents; parsing logic does not belong there. `network.ts` exists
-only where a source needs its own request helpers. URLs are built by named functions in `urls.ts`
-because a URL built inline in an `async` method can only be checked by making the request.
+`main.ts` reads as a table of contents; parsing logic does not belong there. URLs are built by named
+functions in `urls.ts`, each pinned by a test, because a URL built inline in an `async` method can
+only be checked by making the request. MangaFox and MangaKakalot have no `forms/`: both use the
+shared single-genre search form.
 
 Sources add modules for responsibilities the others lack:
 
@@ -35,27 +36,41 @@ Sources add modules for responsibilities the others lack:
 | AsuraScans  | `tracking.ts` | bookmark and progress sync; `forms/progress.ts` is only its UI               |
 | AsuraScans  | `tags.ts`     | search tags persisted for a day                                              |
 | FlameComics | `network.ts`  | `_next/data` routes under the site's rotating build id                       |
+| FlameComics | `search.ts`   | local search over the aggregated catalog; the site has no search endpoint    |
 | MangaFox    | `unpack.ts`   | decoding the packed scripts that carry page URLs                             |
 
 MangaDex is several times the size of the others and is split further, so that no module answers
 more than one question:
 
-| Module                                         | Owns                                                                                                                                          |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `state/`                                       | persisted settings, one file per area, re-exported from `state/index.ts`; every key is declared once in `state/keys.ts`, which reset iterates |
-| `search/`                                      | `filters.ts` (form selections into query options), `fetchers.ts` (the requests behind a page), `by-prefix.ts` (`usr:` and `list:` feeds)      |
-| `ratings.ts`, `relationships.ts`               | the rating vocabularies, and navigation of the `relationships` array                                                                          |
-| `chapters.ts`, `chapter-feed.ts`, `updates.ts` | reading a feed, the manga inlined on each chapter, and the library-update flow                                                                |
+| Module                                  | Owns                                                                                                                                     |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `state/`                                | persisted settings, one file per area; every setting key is in `state/keys.ts`, which reset iterates                                     |
+| `search.ts`, `search-dispatch.ts`       | the search request, and recognizing pasted links and prefixes such as `id:`                                                              |
+| `search/`                               | `filters.ts` (form selections into query options), `fetchers.ts` (the requests behind a page), `by-prefix.ts` (`usr:` and `list:` feeds) |
+| `manga.ts`                              | details, cached briefly so a title opening fetches them once                                                                             |
+| `chapters.ts`, `chapter-helpers.ts`     | paging through a feed, and the pure steps of reading one                                                                                 |
+| `updates.ts`                            | the library-update flow: skip filters, then batched change checks                                                                        |
+| `collection.ts`                         | library sync through Paperback's managed collections                                                                                     |
+| `discover.ts`, `curated-lists.ts`       | the Home sections, and discovery of MangaDex's curated lists                                                                             |
+| `ids.ts`, `legacy.ts`                   | the v4 UUID shape, and converting pre-2021 numeric ids                                                                                   |
+| `ratings.ts`, `relationships.ts`        | the rating vocabularies, and navigation of the `relationships` array                                                                     |
+| `tags.ts`, `languages.ts`, `lookups.ts` | the tag vocabulary, languages, and the other fixed vocabularies                                                                          |
+| `urls.ts`                               | every endpoint, with every query parameter named once in `QUERY`                                                                         |
 
 ## Shared utilities
 
-| Module              | Purpose                                                                         |
-| ------------------- | ------------------------------------------------------------------------------- |
-| `network.ts`        | request helpers; non-2xx and malformed bodies throw, naming the endpoint        |
-| `interceptor.ts`    | `Referer`, user agent and Cloudflare challenges, resolved on the challenged URL |
-| `cache.ts`          | `singleFlight` and `TtlCache`, which coalesce requests made together            |
-| `content-rating.ts` | the rating classifier and the cache of ratings learned from detail pages        |
-| `url-builder/`      | query-string building for the AsuraScans API                                    |
+| Module                         | Purpose                                                                                                   |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `network.ts`                   | request helpers; non-2xx and malformed bodies throw, naming the endpoint; a removed title says to migrate |
+| `interceptor.ts`               | default `Referer` and user agent, and Cloudflare challenges resolved on the challenged URL                |
+| `cache.ts`                     | `singleFlight` and `TtlCache`, which coalesce requests made together                                      |
+| `content-rating.ts`            | the rating classifier, the cache of ratings learned from detail pages, and `RatingResolver`               |
+| `rating.ts`                    | scores scaled to Paperback's 0-1 rating                                                                   |
+| `listing.ts`                   | the scraped listing tile, and the discover item each section type shows for it                            |
+| `text.ts`                      | HTML descriptions as plain text, and error messages for forms                                             |
+| `forms/single-genre-search.ts` | the advanced-search form for sites that filter by one genre                                               |
+| `url-builder/`                 | query-string building for the AsuraScans API, values left as given                                        |
+| `developers.ts`                | the developer credit every manifest carries                                                               |
 
 Readers fail loudly: an error page or a non-JSON body becomes an error the app can offer to retry,
 never an empty shelf or an empty chapter list.
@@ -64,21 +79,25 @@ The app asks for the same data several times at once, such as every discover sec
 details and chapters when a title opens. Caches owned by the extension instance give those callers
 one request between them.
 
+Ratings are reported on Paperback's 0-1 scale whatever the site scores out of, and a title without
+a score reports none rather than the lowest rating.
+
 ## Rate limiting
 
 Each source declares a `BasicRateLimiter` in its `main.ts`. All set `ignoreImages: true`, so cover
 and page images bypass the budget; only API and page requests are paced.
 
-| Source       | Requests/sec | Basis                               |
-| ------------ | ------------ | ----------------------------------- |
-| FlameComics  | 10           | plain JSON endpoints, no protection |
-| AsuraScans   | 6            | tolerant CDN                        |
-| MangaDex     | 5            | the documented public API limit     |
-| MangaFox     | 12           | measured against the site           |
-| MangaKakalot | 8            | measured against the site           |
+| Source       | Requests/sec | Basis                           |
+| ------------ | ------------ | ------------------------------- |
+| FlameComics  | 10           | plain JSON endpoints            |
+| AsuraScans   | 6            | tolerant CDN                    |
+| MangaDex     | 5            | the documented public API limit |
+| MangaFox     | 12           | measured against the site       |
+| MangaKakalot | 8            | measured against the site       |
 
-**MangaKakalot** is the one Cloudflare-protected source, and a re-triggered challenge fails it
-closed rather than slowing it, so its limit stays below what the site absorbed. Cloudflare
+**MangaKakalot** is the one source Cloudflare challenges in practice. FlameComics and MangaFox sit
+behind it too and declare the bypass in case it starts challenging them. A re-triggered challenge
+fails MangaKakalot closed rather than slowing it, so its limit stays below what the site absorbed. Cloudflare
 challenges its search but not its listings, details or chapters, and the measurement comes from
 listings; if the source starts failing closed on device, this limit is the first thing to lower.
 
@@ -91,6 +110,10 @@ Page URLs arrive inside Dean Edwards-packed scripts, which `unpack.ts` decodes a
 site sends is evaluated. Each page gets three attempts, and a page that still fails fails the
 chapter.
 
+A MangaFox chapter id is its chapter segment (`c052`), which the site resolves without the volume
+and which stored reading progress already uses. Only where numbering restarts each volume, and that
+segment repeats within a title, is the id qualified as `v01/c001`.
+
 ## Content ratings
 
 Paperback blurs artwork by rating, so a wrong rating is a privacy problem rather than a cosmetic
@@ -100,8 +123,9 @@ one. `src/utils/content-rating.ts` enforces two rules:
 `EVERYONE` tells the app adult artwork is safe, and no user setting can override it. Rating from a
 site's genre catalog fails the other way, since the catalog always contains "Adult".
 
-**Unknown never reads as safe.** MangaFox and MangaKakalot listings carry only title, cover and
-latest chapter. Such tiles report `UNRATED_LISTING_DEFAULT` (`MATURE`), so the cost of not knowing
+**Unknown never reads as safe.** A title with no genres at all rates `UNRATED_LISTING_DEFAULT`, and
+only an unrecognized genre rates `EVERYONE`. MangaFox and MangaKakalot listings carry only title,
+cover and latest chapter. Such tiles report `UNRATED_LISTING_DEFAULT` (`MATURE`), so the cost of not knowing
 is a blurred safe cover rather than exposed adult artwork.
 
 | Source                  | Where the rating comes from                                       |
@@ -117,8 +141,9 @@ counts. `ContentRatingCache` remembers what detail pages teach, so a title moves
 its real rating once opened.
 
 **MangaKakalot resolves listing tiles eagerly.** It reads the detail page of every unrated tile
-before returning a listing, through a bounded pool, because the rate limiter caps requests per
-second but not how many are outstanding. Its learned ratings persist across launches, capped and
+before returning a listing. One `RatingResolver` per extension shares each lookup and a bounded pool
+across listings loading together, because the rate limiter caps requests per second but not how
+many are outstanding. Its learned ratings persist across launches, capped and
 written once per batch.
 
 **MangaFox does not.** Its listings carry 70 tiles and its detail pages are about 366 KB, roughly

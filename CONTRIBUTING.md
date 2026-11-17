@@ -73,8 +73,10 @@ end-to-end pass or its recorded skip. Shared modules are tested from `shared-uti
 
 - **Fixtures** live in `src/tests/fixtures/`. Hand-written fixtures contain only the elements a
   parser queries, so a failure points at one selector. URLs are built from the source's own
-  constants (`DOMAIN` and similar), so a site move changes one line. Encoded payloads, such as the packed scripts
-  in `mangafox-reader.ts`, are recorded byte-for-byte from the live site instead.
+  constants (`DOMAIN` and similar), so a site move changes one line. Encoded payloads, such as the
+  packed scripts in `mangafox-reader.ts`, are recorded byte-for-byte from the live site instead.
+- **Red first.** A fix lands with a test that fails without it. Run the test against the old code
+  before committing; a test that passes either way pins nothing.
 - **Network.** Code that makes its own requests runs under `withFakeNetwork`
   (`src/tests/fakes/application.ts`). It answers `Application.scheduleRequest` from a route table,
   records every request for assertions such as request counts, and throws on an unrouted request
@@ -103,7 +105,9 @@ Actions are pinned to commit SHAs and kept current by Dependabot. Only jobs that
 ## Releasing
 
 - Bump the source's `version` in its `pbconfig.ts`; Paperback offers updates by version.
-- Add an entry to `CHANGELOG.md` under **Unreleased**, naming the source and new version.
+- Add an entry to `CHANGELOG.md` under `## Unreleased`, naming the source and new version. The
+  heading becomes the release date when the branch deploys. Record a fix only once it is
+  confirmed on a device.
 - Commits follow Conventional Commits (`fix(MangaFox): …`, `perf: …`).
 - Every source file starts with the SPDX header:
   `/* SPDX-License-Identifier: GPL-3.0-or-later */`.
