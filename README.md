@@ -52,6 +52,9 @@ discover keep working. MangaKakalot is the most affected.
 not opted into; the letter is the rating's initial (`U` unrated, `M` mature). Under **Settings →
 Content**, enable the ratings you want visible and turn off blurring for them.
 
+**MangaFox or MangaKakalot is missing from the repository.** Both are declared Mature, because they
+host adult genres. Enable Mature content under **Settings → Content** to have them offered.
+
 **MangaKakalot asks for a Cloudflare check.** Complete it in the window Paperback opens. The result
 is remembered across restarts.
 

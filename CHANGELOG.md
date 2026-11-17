@@ -2,6 +2,77 @@
 
 ## Unreleased
 
+### Changed
+
+- All sources: ratings are reported on one 0–1 scale. MangaFox and MangaKakalot scores are scaled
+  from the site's own scale, AsuraScans now reports the score its API sends, and FlameComics, which
+  has no score, reports none instead of the lowest rating.
+- All sources: a title whose payload carries no genres is shown as Mature until its genres are
+  known, instead of as safe for everyone.
+- MangaKakalot 1.3.0: the source is declared Mature, like MangaFox, since it hosts adult genres.
+- MangaDex 1.2.0: Skip by New Chapters, Skip by Unread Chapters and Skip by Status apply with
+  Optimized Updates off too; before, the form reported titles as skipped while every one was
+  updated.
+- MangaDex 1.2.0: fewer requests. Opening a title fetches its details once instead of again for its
+  chapters, the chapter aggregate is requested only for completed titles, and library titles
+  without chapters in your languages no longer cost an extra request on every update.
+- MangaKakalot 1.3.0: discover sections look up each unrated title once, with one cap on concurrent
+  requests, instead of once per section with up to 32 requests at a time.
+- AsuraScans 1.3.0: opening a tracked title fetches its chapter list once, and refreshing the search
+  filters no longer downloads the author and artist lists.
+- MangaDex 1.2.0: the author and group filters accept a MangaDex link as well as a bare id.
+  "Romanized Title Shown In" is now "Translated Title Shown In", and the group block list says it
+  hides nothing while Group Blocking is off.
+- AsuraScans 1.3.0: the redundant "All" choice is gone from the status and type filters. FlameComics
+  1.2.0: the category AND/OR choice reads "All of them" / "Any of them" under a header.
+- CI: a failing test now fails the pre-push hook, pull request checks and the deploy gate; before,
+  the test run always reported success. Pull requests and deploys share one checks workflow, which
+  also builds the bundle.
+
+### Fixed
+
+- FlameComics 1.2.0: filtering by type, status, year, language or country by any value with a space
+  or punctuation, such as "South Korea", returned nothing.
+- FlameComics 1.2.0: the Random sort reshuffled on every page, so later pages repeated some titles
+  and skipped others.
+- FlameComics 1.2.0: chapters stored by older versions, whose ids do not name the series, failed to
+  open.
+- AsuraScans 1.3.0: searches and genre, status and type tiles listed the least recently updated
+  series first.
+- AsuraScans 1.3.0: titles whose payload has no genres failed to open.
+- AsuraScans 1.3.0: search and discover results repeated or skipped titles when the site returned a
+  short page, and a discover listing with no data failed.
+- AsuraScans 1.3.0: the Latest Updates and Popular carousels could show a different cover than
+  search for the same title.
+- AsuraScans 1.3.0 and FlameComics 1.2.0: synopses showed raw markup and undecoded entities such as
+  `&#8217;`.
+- MangaKakalot 1.3.0: every title reported a rating of 0, because the site changed how it shows
+  scores.
+- MangaKakalot 1.3.0: Latest Updates tiles could not open their latest chapter.
+- MangaKakalot 1.3.0: a chapter page without reader images opened as a blank reader; it now fails so
+  the app offers a retry.
+- MangaKakalot 1.3.0: searching for a title made only of spaces or punctuation returned an error
+  page; it now browses instead.
+- MangaKakalot 1.3.0: a title the site has removed now says so and should be migrated, as MangaFox
+  does, instead of failing with a bare request error.
+- MangaFox 1.3.0: where chapter numbering restarts each volume, chapters sharing a number could not
+  all be opened. Those chapters are now told apart by volume; other chapters keep their ids, so
+  reading progress is unaffected. Chapters also report their volume.
+- MangaFox 1.3.0: titles whose id contains a dot or similar characters listed no chapters.
+- MangaFox 1.3.0: older chapters dated like "Sep 09,2015" could get an invalid date.
+- MangaFox 1.3.0: page requests were sent with two Referer headers.
+- MangaDex 1.2.0: blocked scanlation groups still appeared in Latest Updates.
+- MangaDex 1.2.0: Latest Updates and `usr:` searches showed a title twice when its chapters spanned
+  two pages.
+- MangaDex 1.2.0: pasting a title's link or id found nothing when it had no chapters in your
+  languages.
+- MangaDex 1.2.0: search subtitles were blank when a title's newest chapter was in another language.
+- MangaDex 1.2.0: paging far through an unfiltered group search showed "No results found".
+- MangaDex 1.2.0: update skips did not apply to library titles still stored under a legacy numeric
+  id.
+- MangaDex 1.2.0: the session form kept showing an ended session after a token refresh found it
+  gone.
+
 ## 2026-11-16
 
 ### Security
