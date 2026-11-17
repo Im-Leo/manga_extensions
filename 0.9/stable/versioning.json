@@ -1,5 +1,5 @@
 {
-  "buildTime": "2026-11-17T00:22:37.367Z",
+  "buildTime": "2026-11-17T13:15:48.984Z",
   "builtWith": {
     "toolchain": "1.0.0-alpha.94",
     "types": "1.0.0-alpha.94"
@@ -12,7 +12,7 @@
     {
       "name": "Asura Scans",
       "description": "Extension that pulls content from asurascans.com.",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "icon": "icon.png",
       "language": "en",
       "contentRating": "SAFE",
@@ -35,7 +35,7 @@
     {
       "name": "FlameComics",
       "description": "Extension that pulls content from FlameComics.xyz.",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "icon": "icon.png",
       "language": "en",
       "contentRating": "SAFE",
@@ -57,7 +57,7 @@
     {
       "name": "MangaDex",
       "description": "Extension that pulls content from mangadex.org.",
-      "version": "1.1.2",
+      "version": "1.2.0",
       "icon": "icon.png",
       "language": "multi",
       "contentRating": "SAFE",
@@ -80,7 +80,7 @@
     {
       "name": "MangaFox",
       "description": "Extension that pulls content from fanfox.net.",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "icon": "icon.png",
       "language": "en",
       "contentRating": "MATURE",
@@ -102,10 +102,10 @@
     {
       "name": "MangaKakalot",
       "description": "Extension that pulls content from kakamanga.com.",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "icon": "icon.png",
       "language": "en",
-      "contentRating": "SAFE",
+      "contentRating": "MATURE",
       "capabilities": [
         1,
         4,
