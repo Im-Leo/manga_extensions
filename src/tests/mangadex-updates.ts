@@ -76,6 +76,31 @@ export function registerMangaDexUpdateTests(suite: TestSuite): void {
     }
   });
 
+  suite.test("updates: the batch check is not narrowed by language", async () => {
+    resetAllSettings();
+    try {
+      setOptimizeUpdates(true);
+      const { manager } = updateManager([stored({ mangaId: ALPHA, latestChapter: "chapter-1" })]);
+      const unchanged = {
+        data: [
+          { id: ALPHA, attributes: { status: Status.Ongoing, latestUploadedChapter: "chapter-1" } },
+        ],
+      };
+
+      await withFakeNetwork([["/manga?", { body: unchanged }]], async (network) => {
+        await processTitlesForUpdates(manager);
+
+        expect(network.requests).to.have.lengthOf(1);
+        expect(
+          decodeURIComponent(network.requests[0]?.url ?? ""),
+          "a title without chapters in the user's languages must not drop out and cost a request",
+        ).to.not.contain("availableTranslatedLanguage");
+      });
+    } finally {
+      resetAllSettings();
+    }
+  });
+
   suite.test("updates: a legacy id is skipped under the id the app queued", async () => {
     resetAllSettings();
     try {

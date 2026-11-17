@@ -10,7 +10,6 @@ import type { SearchResponse } from "./models";
 import { fetchJSON } from "./network";
 import { reconcileStoredCompletedStatus } from "./parsers";
 import {
-  getLanguages,
   getOptimizeUpdates,
   getRatings,
   getSkipNewChapters,
@@ -78,7 +77,6 @@ export async function processTitlesForUpdates(
   if (!optimizeUpdates) return;
 
   const ratings: string[] = getRatings();
-  const languages: string[] = getLanguages();
   const batchSize = getUpdateBatchSize();
 
   for (let i = 0; i < candidates.length; i += batchSize) {
@@ -86,9 +84,10 @@ export async function processTitlesForUpdates(
     const idsToSkip: string[] = [];
 
     const request = {
+      // No language filter: latestUploadedChapter spans every language anyway, and a title without
+      // chapters in the user's languages would drop out and cost a request of its own below.
       url: buildMangaListUrl({
         limit: batchSize,
-        languages,
         ratings,
         ids: batchIds,
         includes: [],
