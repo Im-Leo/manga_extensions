@@ -112,7 +112,8 @@ export async function getSearchResults(
     limit: MANGA_PAGE_LIMIT,
     offset,
     ratings,
-    languages,
+    // A pasted link names one title; hiding it for lacking the user's languages reads as "not found".
+    languages: isExactIdLookup ? undefined : languages,
     hasAvailableChapters,
     orderKey,
     orderValue,

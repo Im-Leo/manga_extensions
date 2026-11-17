@@ -46,6 +46,7 @@ import {
   shouldSkipByCount,
 } from "../MangaDex/utils.js";
 import { registerMangaDexCollectionTests } from "./mangadex-collections.js";
+import { registerMangaDexRequestTests } from "./mangadex-requests.js";
 import { registerMangaDexUpdateTests } from "./mangadex-updates.js";
 import { TestSuite, registerSourceTests } from "./suite.js";
 
@@ -406,6 +407,7 @@ export async function runTests(logger: TestLogger) {
   registerHelperTests(suite);
   registerContractTests(suite);
   registerMangaDexCollectionTests(suite);
+  registerMangaDexRequestTests(suite);
   registerMangaDexUpdateTests(suite);
 
   registerSourceTests(suite, MangaDex, sourceInfo, {
