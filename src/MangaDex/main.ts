@@ -5,9 +5,9 @@ import { BasicRateLimiter, type ExtensionImpl } from "@paperback/types";
 
 import { getChapterDetails, getChapters } from "./chapters";
 import {
-  commitManagedCollectionChanges,
-  getManagedLibraryCollections,
-  getSourceMangaInManagedCollection,
+  applyManagedCollectionChanges,
+  getManagedCollectionItems,
+  getManagedCollections,
 } from "./collection";
 import { getDiscoverSectionItems, getDiscoverSections } from "./discover";
 import { getMangaDetails } from "./manga";
@@ -39,9 +39,9 @@ export class MangaDexExtension implements ExtensionImpl<typeof MangaDexConfig> {
   }
 
   getMangaDetails = getMangaDetails;
-  getManagedLibraryCollections = getManagedLibraryCollections;
-  commitManagedCollectionChanges = commitManagedCollectionChanges;
-  getSourceMangaInManagedCollection = getSourceMangaInManagedCollection;
+  getManagedCollections = getManagedCollections;
+  getManagedCollectionItems = getManagedCollectionItems;
+  applyManagedCollectionChanges = applyManagedCollectionChanges;
   getSettingsForm = getSettingsForm;
   getSearchTags = getSearchTags;
   getAdvancedSearchForm = getAdvancedSearchForm;

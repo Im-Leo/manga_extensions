@@ -1,7 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 Im-Leo */
 
-import type { ManagedCollection, ManagedCollectionChangeset, SourceManga } from "@paperback/types";
+import type {
+  ManagedCollection,
+  ManagedCollectionChange,
+  ManagedCollectionChangeFailure,
+  ManagedCollectionItems,
+  SourceManga,
+} from "@paperback/types";
 
 import { JSON_HEADERS } from "../utils/network";
 import { resolveMangaId } from "./legacy";
@@ -14,77 +20,106 @@ import { buildMangaListUrl, buildMangaStatusListUrl, buildMangaStatusWriteUrl } 
 import { MANGA_PAGE_LIMIT, chunk } from "./utils";
 
 /**
- * MangaDex custom lists surfaced as Paperback managed collections, so a title
- * added on either side stays in step.
+ * MangaDex reading statuses surfaced as Paperback managed collections, so a
+ * title filed on either side stays in step.
  */
-export async function getManagedLibraryCollections(): Promise<ManagedCollection[]> {
-  return [
-    { id: "reading", title: "Reading" },
-    { id: "on_hold", title: "On Hold" },
-    { id: "plan_to_read", title: "Planned" },
-    { id: "dropped", title: "Dropped" },
-    { id: "re_reading", title: "Re-reading" },
-    { id: "completed", title: "Completed" },
-  ];
+
+const SIGN_IN_REQUIRED = "MangaDex: sign in to sync your library.";
+
+/** A title has exactly one reading status, so the collections exclude each other. */
+const STATUS_GROUP = "reading-status";
+
+const COLLECTIONS: readonly ManagedCollection[] = [
+  ["reading", "Reading"],
+  ["on_hold", "On Hold"],
+  ["plan_to_read", "Planned"],
+  ["dropped", "Dropped"],
+  ["re_reading", "Re-reading"],
+  ["completed", "Completed"],
+].map(([id = "", title = ""]) => ({ id, title, exclusiveGroup: STATUS_GROUP }));
+
+export async function getManagedCollections(): Promise<ManagedCollection[]> {
+  return [...COLLECTIONS];
 }
 
-async function postStatus(mangaId: string, status: string | null, action: string): Promise<void> {
-  const resolvedId = await resolveMangaId(mangaId);
-  try {
-    await fetchJSON<{ result?: string }>({
-      url: buildMangaStatusWriteUrl(resolvedId).toString(),
-      method: "POST",
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ status }),
-    });
-  } catch (e) {
-    const detail = e instanceof Error ? e.message : String(e);
-    throw new Error(`MangaDex collection ${action} failed for ${resolvedId}: ${detail}`, {
-      cause: e,
-    });
-  }
+/** One status request and one set of detail requests, however many collections are asked for. */
+export async function getManagedCollectionItems(
+  collections: ManagedCollection[],
+): Promise<ManagedCollectionItems[]> {
+  if (!getAccessToken()) throw new Error(SIGN_IN_REQUIRED);
+
+  const statuses = await fetchStatuses();
+  const requested = new Set(collections.map((collection) => collection.id));
+  const ids = Object.keys(statuses).filter((id) => requested.has(statuses[id] ?? ""));
+  const manga = new Map((await fetchManga(ids)).map((item) => [item.mangaId, item]));
+
+  return collections.map((collection) => ({
+    collectionId: collection.id,
+    items: ids.filter((id) => statuses[id] === collection.id).flatMap((id) => manga.get(id) ?? []),
+  }));
 }
 
-export async function commitManagedCollectionChanges(
-  changeset: ManagedCollectionChangeset,
-): Promise<void> {
-  if (!getAccessToken()) {
-    throw new Error("You need to be logged in");
-  }
+/**
+ * Each change is applied on its own and its failure reported by id; the call
+ * throws only when nothing could be applied, as the app expects.
+ */
+export async function applyManagedCollectionChanges(
+  changes: ManagedCollectionChange[],
+): Promise<ManagedCollectionChangeFailure[]> {
+  if (!getAccessToken()) throw new Error(SIGN_IN_REQUIRED);
 
-  const additionRequests = (changeset.additions ?? []).map((a) =>
-    postStatus(a.mangaId, changeset.collection.id, "add"),
+  const outcomes = await Promise.all(
+    changes.map(async (change): Promise<ManagedCollectionChangeFailure | undefined> => {
+      try {
+        await writeStatus(
+          change.sourceManga.mangaId,
+          change.type === "remove" ? null : change.to.id,
+        );
+        return undefined;
+      } catch (error) {
+        return {
+          changeId: change.id,
+          reason: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }),
   );
-  const deletionRequests = (changeset.deletions ?? []).map((d) =>
-    postStatus(d.mangaId, null, "remove"),
-  );
-  await Promise.all([...additionRequests, ...deletionRequests]);
+
+  const failures = outcomes.filter((failure) => failure !== undefined);
+  if (changes.length > 0 && failures.length === changes.length) {
+    throw new Error(
+      `MangaDex: no library change could be saved. ${failures[0]?.reason ?? ""}`.trim(),
+    );
+  }
+  return failures;
 }
 
-export async function getSourceMangaInManagedCollection(
-  managedCollection: ManagedCollection,
-): Promise<SourceManga[]> {
-  if (!getAccessToken()) {
-    throw new Error("You need to be logged in");
-  }
+async function writeStatus(mangaId: string, status: string | null): Promise<void> {
+  await fetchJSON<{ result?: string }>({
+    url: buildMangaStatusWriteUrl(await resolveMangaId(mangaId)).toString(),
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ status }),
+  });
+}
 
-  const statusjson = await fetchJSON<MangaStatusResponse>({
+async function fetchStatuses(): Promise<Record<string, string>> {
+  const response = await fetchJSON<MangaStatusResponse>({
     url: buildMangaStatusListUrl().toString(),
     method: "GET",
   });
 
   if (
-    !statusjson.statuses ||
-    typeof statusjson.statuses !== "object" ||
-    Array.isArray(statusjson.statuses)
+    !response.statuses ||
+    typeof response.statuses !== "object" ||
+    Array.isArray(response.statuses)
   ) {
     throw new Error("MangaDex returned no status data");
   }
+  return response.statuses;
+}
 
-  const ids = Object.keys(statusjson.statuses).filter(
-    (x) => statusjson.statuses[x] === managedCollection.id,
-  );
-
+async function fetchManga(ids: string[]): Promise<SourceManga[]> {
   const responses = await Promise.all(
     chunk(ids, MANGA_PAGE_LIMIT).map((batch) =>
       fetchJSON<SearchResponse>({
@@ -101,15 +136,16 @@ export async function getSourceMangaInManagedCollection(
 
   const detailsSettings = readMangaDetailsSettings();
 
-  return responses.flatMap((json) => {
-    if (!Array.isArray(json.data)) return [];
-    return json.data.map((item) =>
-      parseMangaDetails(
-        item.id,
-        { result: "ok", response: "entity", data: item },
-        undefined,
-        detailsSettings,
-      ),
-    );
-  });
+  return responses.flatMap((json) =>
+    Array.isArray(json.data)
+      ? json.data.map((item) =>
+          parseMangaDetails(
+            item.id,
+            { result: "ok", response: "entity", data: item },
+            undefined,
+            detailsSettings,
+          ),
+        )
+      : [],
+  );
 }
