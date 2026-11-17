@@ -5,7 +5,6 @@ import {
   BasicRateLimiter,
   type ContentRating,
   CookieStorageInterceptor,
-  URL,
   type Chapter,
   type ChapterDetails,
   type Cookie,
@@ -46,9 +45,7 @@ import {
   ratingCache,
 } from "./parsers";
 import type MangaKakalotConfig from "./pbconfig";
-
-/** The chapter API is unpaginated in practice; one oversized page fetches all. */
-const CHAPTER_PAGE_SIZE = 9000;
+import { chapterListUrl, chapterUrl, homeUrl, listingUrl, mangaUrl, searchUrl } from "./urls";
 
 /** The genre list changes rarely; reading it costs the whole homepage. */
 const GENRES_TTL_MS = 6 * 60 * 60 * 1000;
@@ -100,7 +97,7 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
     if (!definition) throw new Error(`MangaKakalot: unknown discover section: ${section.id}`);
 
     const page = metadata?.page ?? 1;
-    const $ = await fetchCheerio(`${DOMAIN}/manga-list/${definition.path}?page=${page}`);
+    const $ = await fetchCheerio(listingUrl(definition.path, page));
 
     return {
       items: await this.withRealRatings(parseDiscoverSectionItems($, section)),
@@ -110,7 +107,7 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
 
   async getAdvancedSearchForm(query: SearchQuery<SearchMetadata>): Promise<AdvancedSearchForm> {
     const genres = await this.genres.get("genres", async () => {
-      const section = parseGenres(await fetchCheerio(DOMAIN));
+      const section = parseGenres(await fetchCheerio(homeUrl()));
       section.tags.sort((a, b) => a.title.localeCompare(b.title));
       return section;
     });
@@ -123,7 +120,7 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
     metadata: Metadata | undefined,
   ): Promise<PagedResults<SearchResultItem>> {
     const page = metadata?.page ?? 1;
-    const $ = await fetchCheerio(this.buildSearchUrl(query, page));
+    const $ = await fetchCheerio(searchUrl(query, page));
 
     return {
       items: await this.withRealRatings(
@@ -150,57 +147,20 @@ export class MangaKakalotExtension implements ExtensionImpl<typeof MangaKakalotC
   }
 
   async getMangaDetails(mangaId: string): Promise<SourceManga> {
-    return parseMangaDetails(await fetchCheerio(`${DOMAIN}/manga/${mangaId}`), mangaId);
+    return parseMangaDetails(await fetchCheerio(mangaUrl(mangaId)), mangaId);
   }
 
   async getChapters(sourceManga: SourceManga): Promise<Chapter[]> {
-    const response = await fetchJSON<ChapterListResponse>(
-      `${DOMAIN}/api/manga/${sourceManga.mangaId}/chapters?limit=${CHAPTER_PAGE_SIZE}&offset=0`,
-    );
+    const response = await fetchJSON<ChapterListResponse>(chapterListUrl(sourceManga.mangaId));
 
     return parseChapterList(response, sourceManga);
   }
 
   async getChapterDetails(chapter: Chapter): Promise<ChapterDetails> {
-    const $ = await fetchCheerio(
-      `${DOMAIN}/manga/${chapter.sourceManga.mangaId}/${chapter.chapterId}`,
-    );
+    const $ = await fetchCheerio(chapterUrl(chapter.sourceManga.mangaId, chapter.chapterId));
 
     return parseChapterDetails($, chapter);
   }
-
-  /**
-   * Title search, genre browse and the default listing are three separate
-   * endpoints; the site has no combined query.
-   */
-  private buildSearchUrl(query: SearchQuery<SearchMetadata>, page: number): string {
-    const url = new URL(DOMAIN);
-    const genre = query.metadata?.genres?.[0];
-
-    if (query.title) {
-      url.addPathComponent("search");
-      url.addPathComponent("story");
-      url.addPathComponent(encodeURIComponent(sanitizeQuery(query.title)));
-    } else if (genre) {
-      url.addPathComponent("genre");
-      url.addPathComponent(genre);
-    } else {
-      url.addPathComponent("manga-list");
-      url.addPathComponent("latest-manga");
-    }
-
-    url.setQueryItem("page", page.toString());
-    return url.toString();
-  }
-}
-
-/** Apostrophes and dots break the search path; quotes are rejected outright. */
-function sanitizeQuery(title: string): string {
-  return title
-    .replace(/'[^ ]*/g, "")
-    .replace(/\.+/g, "")
-    .replace(/["']/g, "")
-    .trim();
 }
 
 export const MangaKakalot = new MangaKakalotExtension();

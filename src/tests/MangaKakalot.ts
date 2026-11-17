@@ -22,6 +22,14 @@ import {
   parseSearchResults,
 } from "../MangaKakalot/parsers.js";
 import sourceInfo from "../MangaKakalot/pbconfig.js";
+import {
+  chapterListUrl,
+  chapterUrl,
+  homeUrl,
+  listingUrl,
+  mangaUrl,
+  searchUrl,
+} from "../MangaKakalot/urls.js";
 import { UNRATED_LISTING_DEFAULT } from "../utils/content-rating.js";
 import { rejectionOf } from "./async.js";
 import {
@@ -55,6 +63,28 @@ const SOURCE_MANGA = {
 } as SourceManga;
 
 function registerOfflineTests(suite: TestSuite): void {
+  suite.test("urls: one builder per endpoint", async () => {
+    expect(homeUrl()).to.equal(DOMAIN);
+    expect(listingUrl("hot-manga", 2)).to.equal(`${DOMAIN}/manga-list/hot-manga?page=2`);
+    expect(mangaUrl("alpha-title")).to.equal(`${DOMAIN}/manga/alpha-title`);
+    expect(chapterListUrl("alpha-title")).to.equal(
+      `${DOMAIN}/api/manga/alpha-title/chapters?limit=9000&offset=0`,
+    );
+    expect(chapterUrl("alpha-title", "chapter-3")).to.equal(
+      `${DOMAIN}/manga/alpha-title/chapter-3`,
+    );
+  });
+
+  suite.test("urls: search picks the title, genre or latest endpoint", async () => {
+    expect(searchUrl({ title: "solo leveling" }, 1)).to.equal(
+      `${DOMAIN}/search/story/solo%20leveling?page=1`,
+    );
+    expect(searchUrl({ title: "", metadata: { genres: ["action"] } }, 2)).to.equal(
+      `${DOMAIN}/genre/action?page=2`,
+    );
+    expect(searchUrl({ title: "" }, 1)).to.equal(`${DOMAIN}/manga-list/latest-manga?page=1`);
+  });
+
   suite.test("parseDiscoverSectionItems: maps every entry and honors section type", async () => {
     const $ = cheerio.load(LISTING_HTML);
     const items = parseDiscoverSectionItems($, {
