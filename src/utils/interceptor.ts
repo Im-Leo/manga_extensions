@@ -73,17 +73,15 @@ export class SiteInterceptor extends PaperbackInterceptor {
   }
 
   override async interceptRequest(request: Request): Promise<Request> {
-    return {
-      ...request,
-      headers: {
-        ...request.headers,
-        // Image CDNs commonly 403 a request with no Referer, which surfaces as
-        // missing covers while page scraping continues to work.
-        referer: `${this.options.domain}/`,
-        "user-agent": await userAgent(),
-      },
-      cookies: { ...request.cookies, ...this.options.cookies },
-    };
+    const headers = { ...request.headers };
+    // Defaults only: header names are case-insensitive, so setting one the request already carries
+    // under another case would send both. Image CDNs commonly 403 a request with no Referer, which
+    // surfaces as missing covers while page scraping continues to work.
+    if (headerValue(headers, "referer") === undefined)
+      headers["referer"] = `${this.options.domain}/`;
+    if (headerValue(headers, "user-agent") === undefined) headers["user-agent"] = await userAgent();
+
+    return { ...request, headers, cookies: { ...request.cookies, ...this.options.cookies } };
   }
 
   override async interceptResponse(

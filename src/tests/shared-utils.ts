@@ -270,6 +270,21 @@ export function registerSharedUtilTests(suite: TestSuite): void {
     });
   });
 
+  suite.test("interceptRequest: a request's own Referer and user agent win", async () => {
+    const interceptor = new SiteInterceptor("test", { domain: SITE });
+
+    const result = await interceptor.interceptRequest({
+      url: `${SITE}/chapterfun.ashx`,
+      method: "GET",
+      headers: { Referer: `${SITE}/manga/x/c001/1.html`, "User-Agent": "custom" },
+    });
+
+    expect(result.headers, "no second, lowercase copy is added").to.deep.equal({
+      Referer: `${SITE}/manga/x/c001/1.html`,
+      "User-Agent": "custom",
+    });
+  });
+
   suite.test(
     "interceptResponse: a Cloudflare challenge is resolved on the challenged URL",
     async () => {
