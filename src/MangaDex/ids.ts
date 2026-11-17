@@ -10,6 +10,11 @@ export const UUID_RE = new RegExp(`^${UUID_FRAGMENT}$`, "i");
 /** Unanchored, for a UUID pasted inside a user's search text. */
 export const UUID_SEARCH_RE = new RegExp(UUID_FRAGMENT, "i");
 
+/** The first v4 UUID in `text`, such as a pasted MangaDex link, lowercased. */
+export function findUuid(text: string | undefined | null): string | undefined {
+  return text?.match(UUID_SEARCH_RE)?.[0].toLowerCase();
+}
+
 /** Trims and lowercases, then validates; undefined for anything that is not a v4 UUID. */
 export function normalizeUuid(raw: string | undefined | null): string | undefined {
   if (!raw) return undefined;

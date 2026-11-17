@@ -122,7 +122,7 @@ export class MangaDexAdvancedSearchForm extends AdvancedSearchForm {
         sectionId: "author_artist_section",
         header: "Author or Artist",
         rowId: "author_or_artist",
-        title: "Author/Artist UUID",
+        title: "Author or artist link or ID",
         value: this.metadata.authorOrArtist,
         apply: (v) => {
           this.metadata.authorOrArtist = v;
@@ -132,7 +132,7 @@ export class MangaDexAdvancedSearchForm extends AdvancedSearchForm {
         sectionId: "group_section",
         header: "Scanlation Group",
         rowId: "group",
-        title: "Group UUID",
+        title: "Group link or ID",
         value: this.metadata.group,
         apply: (v) => {
           this.metadata.group = v;

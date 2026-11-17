@@ -11,7 +11,7 @@ import type {
 } from "@paperback/types";
 
 import { MangaDexAdvancedSearchForm, type MangaDexSearchMetadata } from "./forms/search";
-import { normalizeUuid, UUID_SEARCH_RE } from "./ids";
+import { findUuid, UUID_SEARCH_RE } from "./ids";
 import { resolveChapterId, resolveMangaId } from "./legacy";
 import type { Metadata, SearchResponse } from "./models";
 import { fetchJSON } from "./network";
@@ -104,8 +104,8 @@ export async function getSearchResults(
     ? []
     : expandOriginalLanguages(meta?.originalLanguages ?? []);
   const year = isExactIdLookup ? undefined : parseYearInput(meta?.year);
-  const formAuthorOrArtist = isExactIdLookup ? undefined : normalizeUuid(meta?.authorOrArtist);
-  const formGroup = isExactIdLookup ? undefined : normalizeUuid(meta?.group);
+  const formAuthorOrArtist = isExactIdLookup ? undefined : findUuid(meta?.authorOrArtist);
+  const formGroup = isExactIdLookup ? undefined : findUuid(meta?.group);
   const authorOrArtist = dispatched?.prefix === "author" ? dispatched.uuid : formAuthorOrArtist;
   const group = dispatched?.prefix === "grp" ? dispatched.uuid : formGroup;
 

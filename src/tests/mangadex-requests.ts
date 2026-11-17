@@ -161,6 +161,21 @@ export function registerMangaDexRequestTests(suite: TestSuite): void {
     });
   });
 
+  suite.test("search: the author field accepts a pasted link", async () => {
+    await withFakeNetwork([["/manga?", EMPTY_LIST]], async (network) => {
+      const link = `https://mangadex.org/author/${GROUP.toUpperCase()}/some-author`;
+      await getSearchResults(
+        { title: "", metadata: { authorOrArtist: link } },
+        undefined,
+        undefined,
+      );
+
+      expect(decodeURIComponent(network.requests[0]?.url ?? "")).to.contain(
+        `authorOrArtist=${GROUP}`,
+      );
+    });
+  });
+
   suite.test("search: a title search keeps the language filter", async () => {
     await withFakeNetwork([["/manga?", EMPTY_LIST]], async (network) => {
       await getSearchResults({ title: "frieren" }, undefined, undefined);

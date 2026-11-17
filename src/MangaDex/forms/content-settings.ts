@@ -51,11 +51,12 @@ import {
 } from "../state";
 import { LanguagePriorityForm } from "./language-priority";
 
+/** Where the title in the preferred language goes once the romanized title is primary. */
 const NATIVE_TITLE_DISPLAY_LABELS: Record<string, string> = {
-  none: "None",
-  author: "Author Field",
-  author_desc: "Author Field (+ Author)",
-  description: "Description",
+  none: "Nowhere",
+  author: "Author field",
+  author_desc: "Author field, with the credits",
+  description: "Synopsis",
 };
 
 /** Languages, content ratings, which chapters load and how, titles and synopses, and covers. */
@@ -100,7 +101,7 @@ export class ContentSettingsForm extends Form {
         ...(romanizedPriorityEnabled
           ? [
               SelectRow("native_title_display", {
-                title: "Romanized Title Shown In",
+                title: "Translated Title Shown In",
                 subtitle: NATIVE_TITLE_DISPLAY_LABELS[nativeTitleDisplay] ?? "None",
                 value: [nativeTitleDisplay],
                 minItemCount: 1,
