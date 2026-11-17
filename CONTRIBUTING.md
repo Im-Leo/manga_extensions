@@ -55,7 +55,11 @@ offline tests.
 | `npm test`          | none    | parsers, request logic and contracts; must stay 100% green |
 | `npm run test:live` | real    | end-to-end against the live sites; a failure means drift   |
 
-Live tests are opt-in through `PB_LIVE=1`, which `scripts/test-live.mjs` sets. The runner executes
+Both run through `scripts/run-tests.mjs`, which exits non-zero when any test fails: `paperback-cli
+test` reports failures but always exits 0, so the pre-push hook and CI depend on this script to
+gate. Pass a source id to run one suite, as in `npm test -- MangaDex`.
+
+Live tests are opt-in through `PB_LIVE=1`, which `run-tests.mjs --live` sets. The runner executes
 bundles in a `vm` context without `process`, so `src/tests/live-tests.ts` reads the flag through
 `globalThis`. MangaKakalot's live steps fail whenever Cloudflare challenges the runner; that is
 expected.
