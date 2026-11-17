@@ -8,7 +8,7 @@ import { DEVELOPERS } from "../utils/developers";
 export default {
   name: "FlameComics",
   description: "Extension that pulls content from FlameComics.xyz.",
-  version: "1.1.1",
+  version: "1.2.0",
   icon: "icon.png",
   language: "en",
   contentRating: ContentRating.EVERYONE,
