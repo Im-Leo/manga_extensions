@@ -12,12 +12,13 @@
 
 #### For new extensions
 
-- [ ] Generated tests with `npx paperback-cli test --generate EXTENSION_NAME`.
+- [ ] Added `src/tests/EXTENSION_NAME.ts`, modeled on an existing suite, that calls
+      `registerSourceTests`.
 
 ### Testing changes
 
 - [ ] `npm run conformance` passes.
-- [ ] `npm test -- EXTENSION_NAME` passes.
+- [ ] `npm test -- EXTENSION_NAME` passes, or plain `npm test` when `src/utils` changed.
 - [ ] Bundled the extension and verified it works in the Paperback app.
 
 ### Committing changes
@@ -29,4 +30,5 @@
 Pick one:
 
 - [ ] This PR contains no AI-assisted changes.
-- [ ] This PR is AI-assisted. I manually reviewed every change and added an `Assisted-by: AGENT_NAME:MODEL_VERSION` trailer to each AI-assisted commit.
+- [ ] This PR is AI-assisted. I manually reviewed every change and added an
+      `Assisted-by: AGENT_NAME:MODEL_VERSION` trailer to each AI-assisted commit.
