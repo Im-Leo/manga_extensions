@@ -13,15 +13,15 @@ import {
 
 import type { OptionItem, SearchMetadata, FlameFilter } from "../models";
 
+function toTags(options: OptionItem[] | undefined): Tag[] {
+  return (options ?? []).map((option) => ({ id: option.id, title: option.value }));
+}
+
 /**
  * The advanced-search form. Its option lists are supplied by the caller because
  * they are derived from the aggregated catalog rather than published by the
  * site, and every selection is applied locally.
  */
-function toTags(options: OptionItem[] | undefined): Tag[] {
-  return (options ?? []).map((option) => ({ id: option.id, title: option.value }));
-}
-
 export class FlameAdvancedSearchForm extends AdvancedSearchForm {
   private categories: Record<string, "included" | "excluded">;
   private categoriesMode: ["or" | "and"];
@@ -88,11 +88,12 @@ export class FlameAdvancedSearchForm extends AdvancedSearchForm {
       ]),
       SelectSection(this, {
         id: "categories_mode",
+        header: "Included categories must match",
         layout: "flow",
         value: this.categoriesMode ?? "or",
         items: [
-          { id: "and", title: "AND" },
-          { id: "or", title: "OR" },
+          { id: "and", title: "All of them" },
+          { id: "or", title: "Any of them" },
         ],
         minItemCount: 1,
         maxItemCount: 1,

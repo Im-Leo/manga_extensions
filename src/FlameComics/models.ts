@@ -280,7 +280,6 @@ export type SearchMetadata = {
   year?: string[];
   language?: string;
   country?: string;
-  order?: "asc" | "desc";
 };
 
 export type OptionItem = {
