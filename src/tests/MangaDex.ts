@@ -10,6 +10,7 @@ import {
   normalizePagesCount,
 } from "../MangaDex/chapter-parsers.js";
 import { isRatingAllowed } from "../MangaDex/chapter-utils.js";
+import { GROUP_SEARCH_PAGE_SIZE, hasNextGroupPage } from "../MangaDex/forms/group-block.js";
 import { swapItems } from "../MangaDex/forms/reorderable.js";
 import { MangaDex } from "../MangaDex/main.js";
 import {
@@ -406,6 +407,18 @@ export async function runTests(logger: TestLogger) {
 
   registerHelperTests(suite);
   registerContractTests(suite);
+  suite.test("hasNextGroupPage: stops before the API's offset limit", async () => {
+    const page = GROUP_SEARCH_PAGE_SIZE;
+    expect(hasNextGroupPage(0, page, 50_000)).to.equal(true);
+    expect(hasNextGroupPage(0, page - 1, 50_000), "a short page is the last").to.equal(false);
+    expect(hasNextGroupPage(page, page, page * 2), "nothing beyond the total").to.equal(false);
+    expect(hasNextGroupPage(10_000 - 2 * page, page, 50_000), "last allowed page").to.equal(true);
+    expect(
+      hasNextGroupPage(10_000 - page, page, 50_000),
+      "offset + limit would pass 10000",
+    ).to.equal(false);
+  });
+
   registerMangaDexCollectionTests(suite);
   registerMangaDexRequestTests(suite);
   registerMangaDexUpdateTests(suite);

@@ -23,10 +23,24 @@ import {
   setGroupBlockingEnabled,
 } from "../state";
 import { buildGroupSearchUrl } from "../urls";
+import { MAX_API_OFFSET } from "../utils";
 
-const GROUP_SEARCH_PAGE_SIZE = 100;
+export const GROUP_SEARCH_PAGE_SIZE = 100;
 const SEARCH_DEBOUNCE_MS = 300;
 const MAX_BLOCKED_GROUPS = 25;
+
+/**
+ * Whether a page follows the one shown. The API rejects any request whose offset plus limit
+ * passes MAX_API_OFFSET, which an unfiltered search over every group reaches.
+ */
+export function hasNextGroupPage(offset: number, shown: number, total: number): boolean {
+  const nextOffset = offset + GROUP_SEARCH_PAGE_SIZE;
+  return (
+    shown >= GROUP_SEARCH_PAGE_SIZE &&
+    offset + shown < total &&
+    nextOffset + GROUP_SEARCH_PAGE_SIZE <= MAX_API_OFFSET
+  );
+}
 
 /** Scanlation groups to hide. Names are matched fuzzily, so entries need not be exact. */
 export class GroupBlockForm extends Form {
@@ -173,8 +187,11 @@ export class GroupBlockForm extends Form {
           onSelect: Application.Selector(this as GroupBlockForm, "handleNextPage"),
           isHidden: !(
             hasSearchResults &&
-            this.searchResults.length >= GROUP_SEARCH_PAGE_SIZE &&
-            this.currentOffset + this.searchResults.length < this.totalResultsCount &&
+            hasNextGroupPage(
+              this.currentOffset,
+              this.searchResults.length,
+              this.totalResultsCount,
+            ) &&
             canPaginate
           ),
         }),
@@ -311,8 +328,7 @@ export class GroupBlockForm extends Form {
 
     if (
       !hasSearchResults ||
-      this.searchResults.length < GROUP_SEARCH_PAGE_SIZE ||
-      this.currentOffset + this.searchResults.length >= this.totalResultsCount ||
+      !hasNextGroupPage(this.currentOffset, this.searchResults.length, this.totalResultsCount) ||
       this.isLoading
     ) {
       return;
@@ -339,7 +355,8 @@ export class GroupBlockForm extends Form {
         url: buildGroupSearchUrl({
           limit: GROUP_SEARCH_PAGE_SIZE,
           offset,
-          name: this.searchTerm,
+          // The term the results belong to: paging during a pending edit must not mix in new text.
+          name: this.lastSearchTerm,
         }).toString(),
       });
 
