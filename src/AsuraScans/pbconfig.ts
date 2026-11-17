@@ -8,7 +8,7 @@ import { DEVELOPERS } from "../utils/developers";
 export default {
   name: "Asura Scans",
   description: "Extension that pulls content from asurascans.com.",
-  version: "1.2.0",
+  version: "1.3.0",
   icon: "icon.png",
   language: "en",
   contentRating: ContentRating.EVERYONE,
